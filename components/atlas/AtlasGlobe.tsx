@@ -1432,7 +1432,7 @@ export default function AtlasGlobe({
             "all"
         ) {
             map.setSky(
-                undefined
+                undefined as never
             );
 
             map.setPaintProperty(

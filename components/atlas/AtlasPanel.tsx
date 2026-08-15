@@ -2413,6 +2413,7 @@ export default function AtlasPanel({
             moment: AtlasPinMoment
         ) => {
             if (
+                !selectedPin ||
                 deletingMomentId
             ) {
                 return;
