@@ -1,49 +1,4185 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --atlas-bg: #07090d;
+    --atlas-text: #f1eee6;
+    --atlas-muted: rgba(241, 238, 230, 0.52);
+    --atlas-grid: rgba(255, 255, 255, 0.045);
+    --atlas-blue: #27c7ff;
+    --atlas-blue-soft: #8de4ff;
+    --atlas-crossroad: #ffd54a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* =========================================
+   RESET
+========================================= */
 
-html {
-  height: 100%;
+* {
+    box-sizing: border-box;
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
 }
 
 body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    background: var(--atlas-bg);
+    color: var(--atlas-text);
+    font-family: Arial, Helvetica, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+button,
+input,
+textarea,
+select {
+    font: inherit;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* =========================================
+   ATLAS WORLD
+========================================= */
+
+.atlas {
+    --atlas-panel-width: 320px;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--atlas-bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+    /* =========================================
+   WORLD GRID
+========================================= */
+
+    .atlas::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background-image: linear-gradient( var(--atlas-grid) 1px, transparent 1px ), linear-gradient( 90deg, var(--atlas-grid) 1px, transparent 1px );
+        background-size: 72px 72px;
+        opacity: 0.45;
+        mask-image: radial-gradient( circle at center, black 0%, rgba(0, 0, 0, 0.8) 50%, transparent 90% );
+    }
+
+
+
+/* =========================================
+   GLOBE
+========================================= */
+
+.atlas-viewport {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.atlas-globe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.maplibregl-map {
+    font-family: inherit;
+}
+
+.maplibregl-canvas {
+    outline: none;
+}
+
+/* =========================================
+   BRAND
+========================================= */
+
+.atlas-brand {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    z-index: 20;
+    color: rgba(241, 238, 230, 0.72);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.34em;
+    pointer-events: none;
+}
+
+/* =========================================
+   TIME CONTROLS
+========================================= */
+
+.atlas-time-controls {
+    position: absolute;
+    top: 52px;
+    left: calc( (
+                100vw -
+                var(
+                    --atlas-panel-width,
+                    0px
+                )
+            ) / 2 );
+    z-index: 20;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 34px;
+}
+
+    .atlas-time-controls button {
+        appearance: none;
+        border: 0;
+        padding: 4px 7px;
+        background: transparent;
+        color: rgba(141, 228, 255, 0.55);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        transition: color 180ms ease, opacity 180ms ease, text-shadow 180ms ease;
+    }
+
+        .atlas-time-controls button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-time-controls button.is-active {
+            color: var(--atlas-blue);
+            text-shadow: 0 0 12px rgba(39, 199, 255, 0.3);
+        }
+
+.atlas-time-all {
+    font-size: 13px !important;
+}
+
+.atlas-time-row {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+}
+
+/* =========================================
+   PRESENT TEMPORAL LENS
+========================================= */
+
+.atlas-present-lens {
+    position: absolute;
+    top: 86px;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate( -50%, -4px );
+    pointer-events: none;
+    transition: opacity 240ms ease, transform 240ms cubic-bezier( 0.22, 1, 0.36, 1 ), visibility 0s linear 240ms;
+}
+
+    .atlas-present-lens.is-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: translate( -50%, 0 );
+        pointer-events: auto;
+        transition: opacity 240ms ease, transform 240ms cubic-bezier( 0.22, 1, 0.36, 1 ), visibility 0s;
+    }
+
+    .atlas-present-lens button {
+        padding: 3px 2px;
+        color: rgba( 141, 228, 255, 0.35 );
+        font-size: 8px;
+        letter-spacing: 0.12em;
+    }
+
+        .atlas-present-lens button:hover {
+            color: rgba( 141, 228, 255, 0.72 );
+        }
+
+        .atlas-present-lens button.is-active {
+            color: rgba( 39, 199, 255, 0.88 );
+            text-shadow: 0 0 10px rgba( 39, 199, 255, 0.18 );
+        }
+
+/* =========================================
+   LEFT DRAWER
+========================================= */
+
+.atlas-drawer {
+    position: absolute;
+    top: 92px;
+    left: 0;
+    z-index: 30;
+    width: 260px;
+    transform: translateX(-260px);
+    transition: transform 280ms cubic-bezier( 0.22, 1, 0.36, 1 );
+}
+
+    .atlas-drawer.is-open {
+        transform: translateX(0);
+    }
+
+/* =========================================
+   DRAWER TAB
+========================================= */
+
+.atlas-drawer-tab {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    width: 44px;
+    height: 62px;
+    border: 1px solid rgba(39, 199, 255, 0.34);
+    border-left: 0;
+    border-radius: 0 5px 5px 0;
+    background: rgba(10, 16, 22, 0.84);
+    color: var(--atlas-blue);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.atlas-tab-sigil {
+    font-size: 17px;
+    transform: rotate(45deg);
+    transition: transform 250ms ease;
+}
+
+.atlas-drawer.is-open
+.atlas-tab-sigil {
+    transform: rotate(135deg);
+}
+
+/* =========================================
+   DRAWER CONTENT
+========================================= */
+
+.atlas-drawer-content {
+    min-height: 300px;
+    padding: 22px 22px 28px;
+    border-right: 1px solid rgba(39, 199, 255, 0.14);
+    background: rgba(7, 11, 16, 0.93);
+    backdrop-filter: blur(14px);
+}
+
+.atlas-drawer-heading {
+    margin-bottom: 26px;
+    color: rgba(241, 238, 230, 0.42);
+    font-size: 9px;
+    letter-spacing: 0.28em;
+}
+
+/* =========================================
+   ADD PIN
+========================================= */
+
+.atlas-add-pin {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    padding: 12px 0 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: transparent;
+    color: rgba(241, 238, 230, 0.72);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+}
+
+    .atlas-add-pin.is-active {
+        color: var(--atlas-blue);
+    }
+
+/* =========================================
+   SWITCH
+========================================= */
+
+.atlas-switch {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border: 1px solid rgba(141, 228, 255, 0.25);
+    border-radius: 999px;
+    transition: border-color 180ms ease;
+}
+
+    .atlas-switch span {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(141, 228, 255, 0.42);
+        transition: transform 180ms ease, background 180ms ease;
+    }
+
+    .atlas-switch.is-on {
+        border-color: rgba(39, 199, 255, 0.65);
+    }
+
+        .atlas-switch.is-on span {
+            transform: translateX(14px);
+            background: var(--atlas-blue);
+        }
+
+/* =========================================
+   COLLECTIONS
+========================================= */
+
+.atlas-collection-list {
+    display: flex;
+    flex-direction: column;
+    padding-top: 18px;
+}
+
+    .atlas-collection-list button {
+        appearance: none;
+        width: 100%;
+        border: 0;
+        padding: 9px 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.42);
+        text-align: left;
+        font-size: 10px;
+        letter-spacing: 0.13em;
+        cursor: pointer;
+        transition: color 160ms ease;
+    }
+
+        .atlas-collection-list button:hover,
+        .atlas-collection-list button.is-active {
+            color: var(--atlas-blue-soft);
+        }
+
+    .atlas-collection-list
+    .atlas-new-collection {
+        margin-top: 10px;
+        color: rgba(39, 199, 255, 0.58);
+    }
+
+/* =========================================
+   NEW COLLECTION
+========================================= */
+
+.atlas-new-collection-form {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+    .atlas-new-collection-form input {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(39, 199, 255, 0.22);
+        padding: 8px 0;
+        outline: none;
+        background: transparent;
+        color: var(--atlas-text);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+    }
+
+        .atlas-new-collection-form
+        input::placeholder {
+            color: rgba(241, 238, 230, 0.24);
+        }
+
+.atlas-new-collection-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+    .atlas-new-collection-actions button {
+        width: auto;
+        padding: 5px 0;
+        color: rgba(241, 238, 230, 0.4);
+    }
+
+        .atlas-new-collection-actions
+        button:first-child {
+            color: var(--atlas-blue);
+        }
+
+        .atlas-new-collection-actions
+        button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+/* =========================================
+   MARKERS
+========================================= */
+
+.atlas-marker {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background: #07090d;
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(7, 9, 13, 0.45);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+    .atlas-marker:hover {
+        transform: scale(1.12);
+    }
+
+.atlas-marker--past {
+    color: #547b8f;
+}
+
+.atlas-marker--present {
+    color: #27c7ff;
+}
+
+.atlas-marker--future {
+    color: #9eeeff;
+    box-shadow: 0 0 10px rgba(39, 199, 255, 0.65);
+}
+
+/* =========================================
+   PIN HOVER LABEL
+========================================= */
+
+.atlas-marker-label {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    z-index: 4;
+    max-width: 180px;
+    padding: 7px 9px;
+    border: 1px solid rgba(39, 199, 255, 0.18);
+    border-radius: 5px;
+    background: rgba(7, 11, 16, 0.94);
+    color: rgba(241, 238, 230, 0.82);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    line-height: 1.25;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 4px);
+    transition: opacity 150ms ease, transform 150ms ease;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.atlas-marker:hover
+.atlas-marker-label,
+.atlas-marker:focus-visible
+.atlas-marker-label {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* =========================================
+   CROSSROAD / SUPER PIN
+========================================= */
+
+.atlas-marker--crossroad {
+    width: 22px;
+    height: 22px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+    .atlas-marker--crossroad::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 12px;
+        height: 12px;
+        border: 1px solid currentColor;
+        border-radius: 50%;
+        background: #07090d;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 3px rgba(7, 9, 13, 0.45);
+        pointer-events: none;
+    }
+
+    .atlas-marker--crossroad::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        border: 1px solid rgba(255, 213, 74, 0.92);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        box-shadow: 0 0 8px rgba(255, 213, 74, 0.24);
+    }
+
+.atlas-marker--future.atlas-marker--crossroad::before {
+    box-shadow: 0 0 10px rgba(39, 199, 255, 0.65);
+}
+
+/* =========================================
+   DRAFT MARKER
+========================================= */
+
+.atlas-marker--draft {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #ffffff;
+    border-radius: 50%;
+    background: rgba(39, 199, 255, 0.3);
+    box-shadow: 0 0 18px rgba(39, 199, 255, 0.75);
+    pointer-events: none;
+}
+
+/* =========================================
+   RIGHT PANEL
+========================================= */
+
+.atlas-panel,
+.atlas-guide-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    width: var(--atlas-panel-width, 320px);
+    overflow: hidden;
+    border-left: 1px solid rgba(39, 199, 255, 0.16);
+    background: rgba(7, 11, 16, 0.94);
+    backdrop-filter: blur(16px);
+    color: var(--atlas-text);
+}
+
+/* =========================================
+   PANEL RESIZE RAIL
+========================================= */
+
+.atlas-panel-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: var( --atlas-panel-width, 0px );
+    z-index: 46;
+    width: 10px;
+    transform: translateX(50%);
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+    .atlas-panel-resizer::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+        transform: translateX(-50%);
+        background: rgba( 39, 199, 255, 0.12 );
+        transition: background 180ms ease, box-shadow 180ms ease;
+    }
+
+/* =========================================
+   RESIZE HANDLE
+========================================= */
+
+.atlas-panel-resizer-handle {
+    appearance: none;
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translate( 0, -50% );
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 82px;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: rgba( 39, 199, 255, 0.68 );
+    cursor: pointer;
+    transition: color 180ms ease, filter 180ms ease, transform 180ms ease;
+}
+
+.atlas-panel-resizer-chevron-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    transform: translateX(0);
+    filter: drop-shadow( 0 0 7px rgba( 39, 199, 255, 0.34 ) );
+}
+
+    .atlas-panel-resizer-chevron-group > span {
+        display: block;
+        margin-right: -9px;
+        font-size: 48px;
+        font-weight: 200;
+        line-height: 0.72;
+        user-select: none;
+        pointer-events: none;
+    }
+
+        .atlas-panel-resizer-chevron-group > span:last-child {
+            margin-right: 0;
+        }
+
+/* COLLAPSED GUIDE CUE */
+
+.atlas-panel-resizer.is-collapsed
+.atlas-panel-resizer-handle {
+    color: var(--atlas-blue);
+    filter: drop-shadow( 0 0 9px rgba( 39, 199, 255, 0.52 ) );
+}
+
+    .atlas-panel-resizer.is-collapsed
+    .atlas-panel-resizer-handle::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 28px;
+        width: 70px;
+        height: 2px;
+        transform: translateY(-50%);
+        background: linear-gradient( 90deg, transparent, rgba( 39, 199, 255, 0.08 ), rgba( 39, 199, 255, 0.55 ) );
+        filter: blur(1px);
+        opacity: 0;
+        pointer-events: none;
+        animation: atlas-directional-glow 2.8s ease-in-out infinite;
+    }
+
+.atlas-panel-resizer.is-collapsed
+.atlas-panel-resizer-chevron-group {
+    animation: atlas-chevron-invite 2.8s ease-in-out infinite;
+}
+
+@keyframes atlas-chevron-invite {
+    0%, 100% {
+        transform: translateX(5px);
+        opacity: 0.68;
+        filter: drop-shadow( 0 0 6px rgba( 39, 199, 255, 0.28 ) );
+    }
+
+    45% {
+        transform: translateX(-4px);
+        opacity: 1;
+        filter: drop-shadow( 0 0 15px rgba( 39, 199, 255, 0.72 ) );
+    }
+
+    70% {
+        transform: translateX(-1px);
+        opacity: 0.88;
+    }
+}
+
+@keyframes atlas-directional-glow {
+    0%, 18%, 100% {
+        opacity: 0;
+        transform: translate( 20px, -50% ) scaleX(0.45);
+    }
+
+    46% {
+        opacity: 0.72;
+        transform: translate( -4px, -50% ) scaleX(1);
+    }
+
+    68% {
+        opacity: 0;
+        transform: translate( -26px, -50% ) scaleX(1.15);
+    }
+}
+
+/* HOVER */
+
+.atlas-panel-resizer:hover::before {
+    background: rgba( 39, 199, 255, 0.42 );
+    box-shadow: 0 0 12px rgba( 39, 199, 255, 0.18 );
+}
+
+.atlas-panel-resizer:hover
+.atlas-panel-resizer-handle {
+    color: #ffffff;
+    filter: drop-shadow( 0 0 16px rgba( 39, 199, 255, 0.7 ) );
+    transform: translate( 0, -50% ) scale(1.05);
+}
+
+/* ACTIVE RESIZE */
+
+.atlas-panel-resizer.is-resizing::before,
+.atlas--panel-resizing
+.atlas-panel-resizer::before {
+    background: rgba( 39, 199, 255, 0.72 );
+    box-shadow: 0 0 18px rgba( 39, 199, 255, 0.28 );
+}
+
+.atlas-panel-resizer.is-resizing
+.atlas-panel-resizer-handle,
+.atlas--panel-resizing
+.atlas-panel-resizer-handle {
+    color: #ffffff;
+    filter: drop-shadow( 0 0 20px rgba( 39, 199, 255, 0.82 ) );
+}
+
+.atlas-panel-resizer.is-resizing
+.atlas-panel-resizer-chevron-group,
+.atlas--panel-resizing
+.atlas-panel-resizer-chevron-group {
+    animation: none;
+}
+
+.atlas--panel-resizing {
+    cursor: ew-resize !important;
+}
+
+    .atlas--panel-resizing
+    .atlas-panel-resizer {
+        cursor: ew-resize !important;
+    }
+
+    .atlas--panel-resizing
+    .atlas-panel-scroll,
+    .atlas--panel-resizing
+    .atlas-guide-scroll {
+        pointer-events: none;
+    }
+
+    .atlas--panel-resizing
+    .atlas-time-controls {
+        transition: none;
+    }
+
+/* =========================================
+   GUIDE WORKSPACE
+========================================= */
+
+.atlas-guide-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 48px 32px 48px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba( 39, 199, 255, 0.22 ) transparent;
+}
+
+    .atlas-guide-scroll::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .atlas-guide-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .atlas-guide-scroll::-webkit-scrollbar-thumb {
+        background: rgba( 39, 199, 255, 0.2 );
+        border-radius: 999px;
+    }
+
+.atlas-guide-eyebrow {
+    margin-bottom: 20px;
+    color: rgba( 39, 199, 255, 0.7 );
+    font-size: 9px;
+    letter-spacing: 0.3em;
+}
+
+.atlas-guide-title {
+    max-width: 340px;
+    margin: 0 0 16px;
+    color: rgba( 241, 238, 230, 0.9 );
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1.18;
+}
+
+.atlas-guide-copy {
+    max-width: 420px;
+    margin: 0 0 30px;
+    color: rgba( 241, 238, 230, 0.48 );
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.atlas-guide-video {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 104px;
+    margin-bottom: 34px;
+    padding: 18px;
+    border: 1px solid rgba( 39, 199, 255, 0.14 );
+    background: linear-gradient( 135deg, rgba( 39, 199, 255, 0.055 ), rgba( 39, 199, 255, 0.012 ) );
+}
+
+.atlas-guide-video-mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba( 39, 199, 255, 0.35 );
+    border-radius: 50%;
+    color: var(--atlas-blue);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+}
+
+.atlas-guide-video-copy {
+    color: rgba( 241, 238, 230, 0.72 );
+    font-size: 9px;
+    letter-spacing: 0.14em;
+}
+
+    .atlas-guide-video-copy span {
+        display: block;
+        margin-top: 7px;
+        color: rgba( 241, 238, 230, 0.28 );
+        font-size: 8px;
+        letter-spacing: 0.06em;
+    }
+
+.atlas-guide-section {
+    padding: 18px 0;
+    border-top: 1px solid rgba( 255, 255, 255, 0.07 );
+}
+
+    .atlas-guide-section > span {
+        color: rgba( 141, 228, 255, 0.58 );
+        font-size: 8px;
+        letter-spacing: 0.16em;
+    }
+
+    .atlas-guide-section p {
+        max-width: 420px;
+        margin: 9px 0 0;
+        color: rgba( 241, 238, 230, 0.4 );
+        font-size: 10px;
+        line-height: 1.65;
+    }
+
+.atlas-guide-note {
+    margin-top: 24px;
+    color: rgba( 241, 238, 230, 0.2 );
+    font-size: 8px;
+    line-height: 1.6;
+    letter-spacing: 0.06em;
+}
+
+/* =========================================
+   PANEL SCROLL
+========================================= */
+
+.atlas-panel-scroll {
+    position: absolute;
+    inset: 0 0 68px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 38px 26px 48px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(39, 199, 255, 0.22) transparent;
+}
+
+    .atlas-panel-scroll::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .atlas-panel-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .atlas-panel-scroll::-webkit-scrollbar-thumb {
+        background: rgba(39, 199, 255, 0.2);
+        border-radius: 999px;
+    }
+
+/* =========================================
+   PANEL HEADING
+========================================= */
+
+.atlas-panel-heading {
+    margin-bottom: 34px;
+    color: rgba(39, 199, 255, 0.65);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+}
+
+/* =========================================
+   PANEL FIELDS
+========================================= */
+
+.atlas-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 26px;
+}
+
+    .atlas-field > span,
+    .atlas-content-heading {
+        color: rgba(241, 238, 230, 0.42);
+        font-size: 9px;
+        letter-spacing: 0.2em;
+    }
+
+    .atlas-field input,
+    .atlas-field textarea {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 8px 0 10px;
+        outline: none;
+        background: transparent;
+        color: var(--atlas-text);
+    }
+
+    .atlas-field textarea {
+        min-height: 82px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+        .atlas-field input::placeholder,
+        .atlas-field textarea::placeholder {
+            color: rgba(241, 238, 230, 0.25);
+        }
+
+/* =========================================
+   STATE + COLLECTIONS
+========================================= */
+
+.atlas-state-options {
+    display: flex;
+    gap: 8px;
+}
+
+    .atlas-state-options button,
+    .atlas-panel-collections button {
+        appearance: none;
+        border: 1px solid rgba(141, 228, 255, 0.15);
+        padding: 7px 9px;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.45);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: border-color 160ms ease, color 160ms ease;
+    }
+
+        .atlas-state-options button:hover,
+        .atlas-panel-collections button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-state-options
+        button.is-active,
+        .atlas-panel-collections
+        button.is-active {
+            border-color: rgba(39, 199, 255, 0.55);
+            color: var(--atlas-blue);
+        }
+
+.atlas-panel-collections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.atlas-panel-empty {
+    color: rgba(241, 238, 230, 0.26);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+}
+
+/* =========================================
+   CONTENT
+========================================= */
+
+.atlas-content {
+    margin-top: 4px;
+    margin-bottom: 34px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.atlas-content-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.atlas-content-heading {
+    margin: 0;
+}
+
+.atlas-content-count {
+    color: rgba(141, 228, 255, 0.28);
+    font-size: 8px;
+    letter-spacing: 0.12em;
+}
+
+/* =========================================
+   DROP ZONE
+========================================= */
+
+.atlas-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 92px;
+    margin-bottom: 12px;
+    border: 1px dashed rgba(39, 199, 255, 0.24);
+    background: rgba(39, 199, 255, 0.025);
+    cursor: pointer;
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+    .atlas-dropzone:hover,
+    .atlas-dropzone.is-dragging {
+        border-color: rgba(39, 199, 255, 0.7);
+        background: rgba(39, 199, 255, 0.065);
+        box-shadow: inset 0 0 24px rgba(39, 199, 255, 0.035);
+    }
+
+.atlas-file-input {
+    display: none;
+}
+
+.atlas-dropzone-title {
+    color: rgba(141, 228, 255, 0.72);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+}
+
+.atlas-dropzone-subtitle {
+    margin-top: 6px;
+    color: rgba(241, 238, 230, 0.26);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+}
+
+/* =========================================
+   CONTENT TOOLS
+========================================= */
+
+.atlas-content-tool,
+.atlas-folder-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.atlas-content-tool-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.atlas-content-tool-title {
+    overflow: hidden;
+    color: rgba(241, 238, 230, 0.82);
+    font-size: 10px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-content-tool-meta,
+.atlas-folder-toolbar-label {
+    margin-top: 4px;
+    color: rgba(141, 228, 255, 0.34);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+}
+
+.atlas-content-tool-input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    border-bottom: 1px solid rgba(39, 199, 255, 0.45);
+    padding: 5px 0;
+    outline: none;
+    background: transparent;
+    color: var(--atlas-text);
+    font-size: 10px;
+}
+
+.atlas-content-tool button,
+.atlas-folder-toolbar button {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--atlas-blue);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+    .atlas-content-tool button:hover,
+    .atlas-folder-toolbar button:hover {
+        color: var(--atlas-blue-soft);
+    }
+
+    .atlas-content-tool button:disabled,
+    .atlas-folder-toolbar button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+/* =========================================
+   ERROR
+========================================= */
+
+.atlas-media-error {
+    margin: 12px 0;
+    color: rgba(255, 125, 125, 0.8);
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
+}
+
+.atlas-content-empty {
+    padding: 18px 0;
+}
+
+/* =========================================
+   FOLDERS
+========================================= */
+
+.atlas-folder {
+    margin-top: 18px;
+    border-top: 1px solid rgba(39, 199, 255, 0.11);
+}
+
+.atlas-folder--loose {
+    margin-top: 28px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.atlas-folder-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 0 11px;
+}
+
+.atlas-folder-title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.atlas-folder-title {
+    overflow: hidden;
+    color: rgba(141, 228, 255, 0.78);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-folder-count {
+    margin-top: 4px;
+    color: rgba(241, 238, 230, 0.24);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+}
+
+.atlas-folder-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .atlas-folder-actions button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.34);
+        font-size: 7px;
+        letter-spacing: 0.09em;
+        cursor: pointer;
+    }
+
+        .atlas-folder-actions
+        button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+    .atlas-folder-actions
+    .atlas-folder-delete:hover {
+        color: rgba(255, 145, 145, 0.9);
+    }
+
+    .atlas-folder-actions
+    button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+.atlas-folder-rename-input {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid rgba(39, 199, 255, 0.45);
+    padding: 3px 0;
+    outline: none;
+    background: transparent;
+    color: var(--atlas-text);
+    font-size: 10px;
+}
+
+.atlas-folder-empty {
+    padding: 10px 0 14px;
+    color: rgba(241, 238, 230, 0.2);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+}
+
+.atlas-folder-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   MEDIA
+========================================= */
+
+.atlas-media-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.atlas-media-item {
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.atlas-media-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.atlas-media-info {
+    min-width: 0;
+}
+
+.atlas-media-name {
+    display: block;
+    overflow: hidden;
+    color: rgba(241, 238, 230, 0.88);
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-media-meta {
+    display: block;
+    margin-top: 6px;
+    color: rgba(141, 228, 255, 0.4);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+}
+
+/* =========================================
+   PRIMARY CONTENT ACTION
+========================================= */
+
+.atlas-media-open-card {
+    appearance: none;
+    width: 100%;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border: 1px solid rgba(141, 228, 255, 0.08);
+    padding: 14px 16px;
+    background: rgba(39, 199, 255, 0.012);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+    .atlas-media-open-card:hover {
+        border-color: rgba(39, 199, 255, 0.3);
+        background: rgba(39, 199, 255, 0.035);
+        box-shadow: inset 0 0 24px rgba(39, 199, 255, 0.025);
+    }
+
+.atlas-media-open-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.atlas-media-primary-action {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: rgba(141, 228, 255, 0.72);
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+}
+
+.atlas-media-primary-arrow {
+    color: var(--atlas-blue);
+    font-size: 13px;
+    line-height: 1;
+    transition: transform 180ms ease;
+}
+
+.atlas-media-open-card:hover
+.atlas-media-primary-arrow {
+    transform: translateX(3px);
+}
+
+/* =========================================
+   MEDIA ACTIONS
+========================================= */
+
+.atlas-media-actions,
+.atlas-media-admin-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+    .atlas-media-actions button,
+    .atlas-media-admin-actions button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.34);
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: color 160ms ease, opacity 160ms ease;
+    }
+
+        .atlas-media-actions button:hover,
+        .atlas-media-admin-actions button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+    .atlas-media-admin-actions
+    .atlas-media-delete:hover {
+        color: rgba(255, 145, 145, 0.9);
+    }
+
+    .atlas-media-actions button:disabled,
+    .atlas-media-admin-actions button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+/* =========================================
+   MOVE CONTENT
+========================================= */
+
+.atlas-media-move {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .atlas-media-move span {
+        flex: 0 0 auto;
+        color: rgba(241, 238, 230, 0.24);
+        font-size: 7px;
+        letter-spacing: 0.12em;
+    }
+
+    .atlas-media-move select {
+        min-width: 0;
+        flex: 1;
+        border: 1px solid rgba(141, 228, 255, 0.12);
+        padding: 7px 9px;
+        outline: none;
+        background: rgba(7, 11, 16, 0.86);
+        color: rgba(241, 238, 230, 0.55);
+        font-size: 8px;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+    }
+
+        .atlas-media-move select:focus {
+            border-color: rgba(39, 199, 255, 0.45);
+        }
+
+        .atlas-media-move select:disabled {
+            opacity: 0.35;
+        }
+
+/* =========================================
+   ADMIN ACTIONS
+========================================= */
+
+.atlas-media-admin-actions {
+    justify-content: flex-end;
+    min-height: 14px;
+}
+
+/* =========================================
+   MEDIA RENAME
+========================================= */
+
+.atlas-media-rename-input {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid rgba(39, 199, 255, 0.45);
+    padding: 4px 0;
+    outline: none;
+    background: transparent;
+    color: var(--atlas-text);
+    font-size: 11px;
+}
+
+/* =========================================
+   PREVIEW
+========================================= */
+
+.atlas-media-preview {
+    margin-top: 13px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.24);
+}
+
+    .atlas-media-preview img,
+    .atlas-media-preview video {
+        display: block;
+        width: 100%;
+        max-height: 360px;
+        object-fit: contain;
+        background: #020304;
+    }
+
+    .atlas-media-preview audio {
+        display: block;
+        width: 100%;
+    }
+
+.atlas-media-preview--embed {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+}
+
+    .atlas-media-preview--embed iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+.atlas-media-file-link {
+    padding: 12px;
+}
+
+    .atlas-media-file-link a {
+        color: var(--atlas-blue-soft);
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-decoration: none;
+    }
+
+/* =========================================
+   COORDINATES
+========================================= */
+
+.atlas-coordinates {
+    margin-top: 24px;
+    padding-bottom: 20px;
+    color: rgba(241, 238, 230, 0.28);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+/* =========================================
+   FIXED ACTION BAR
+========================================= */
+
+.atlas-panel-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 68px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 26px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(7, 11, 16, 0.98);
+    backdrop-filter: blur(12px);
+}
+
+    .atlas-panel-actions button {
+        appearance: none;
+        border: 0;
+        padding: 8px 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.42);
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        transition: color 160ms ease, opacity 160ms ease;
+    }
+
+        .atlas-panel-actions
+        button:hover {
+            color: var(--atlas-text);
+        }
+
+    .atlas-panel-actions
+    .atlas-save {
+        margin-left: auto;
+        color: var(--atlas-blue);
+    }
+
+    .atlas-panel-actions
+    .atlas-delete {
+        color: rgba(255, 128, 128, 0.55);
+    }
+
+        .atlas-panel-actions
+        .atlas-delete:hover {
+            color: rgba(255, 150, 150, 0.95);
+        }
+
+    .atlas-panel-actions
+    button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+/* =========================================
+   PIN MOMENTS V1
+========================================= */
+
+.atlas-moments-field {
+    margin-top: -4px;
+}
+
+.atlas-moment-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 0 5px;
+    scrollbar-width: none;
+}
+
+    .atlas-moment-ribbon::-webkit-scrollbar {
+        display: none;
+    }
+
+.atlas-moment-chip {
+    appearance: none;
+    flex: 0 0 auto;
+    min-width: 42px;
+    border: 1px solid rgba(141, 228, 255, 0.14);
+    padding: 7px 9px;
+    background: transparent;
+    color: rgba(241, 238, 230, 0.42);
+    font-size: 8px;
+    letter-spacing: 0.09em;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+    .atlas-moment-chip:hover {
+        color: var(--atlas-blue-soft);
+        border-color: rgba(39, 199, 255, 0.36);
+    }
+
+    .atlas-moment-chip.is-active {
+        color: var(--atlas-blue);
+        border-color: rgba(39, 199, 255, 0.58);
+        background: rgba(39, 199, 255, 0.035);
+        box-shadow: 0 0 12px rgba(39, 199, 255, 0.06);
+    }
+
+.atlas-moment-chip--add {
+    min-width: 30px;
+    color: rgba(39, 199, 255, 0.72);
+    font-size: 12px;
+    line-height: 1;
+}
+
+.atlas-moment-status {
+    margin-top: 8px;
+    color: rgba(241, 238, 230, 0.22);
+    font-size: 7px;
+    line-height: 1.5;
+    letter-spacing: 0.1em;
+}
+
+.atlas-moment-error {
+    margin-top: 9px;
+    margin-bottom: 0;
+}
+
+.atlas-moment-summary {
+    margin-top: 10px;
+    padding: 12px 0 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.atlas-moment-summary-main {
+    min-width: 0;
+}
+
+.atlas-moment-summary-date {
+    color: rgba(141, 228, 255, 0.62);
+    font-size: 8px;
+    line-height: 1.45;
+    letter-spacing: 0.1em;
+}
+
+.atlas-moment-summary-title {
+    margin-top: 6px;
+    color: rgba(241, 238, 230, 0.82);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.atlas-moment-summary-notes {
+    margin-top: 7px;
+    color: rgba(241, 238, 230, 0.38);
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+.atlas-moment-summary-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+    .atlas-moment-summary-actions button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.34);
+        font-size: 7px;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+    }
+
+        .atlas-moment-summary-actions button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+    .atlas-moment-summary-actions .atlas-moment-delete:hover {
+        color: rgba(255, 145, 145, 0.9);
+    }
+
+    .atlas-moment-summary-actions button:disabled {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+/* =========================================
+   MOMENT FORM
+========================================= */
+
+.atlas-moment-form {
+    margin-top: 10px;
+    padding: 12px 0 2px;
+    border-top: 1px solid rgba(39, 199, 255, 0.11);
+}
+
+.atlas-moment-type-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+    .atlas-moment-type-row button {
+        appearance: none;
+        border: 1px solid rgba(141, 228, 255, 0.12);
+        padding: 6px 8px;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.36);
+        font-size: 7px;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+    }
+
+        .atlas-moment-type-row button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-moment-type-row button.is-active {
+            border-color: rgba(39, 199, 255, 0.5);
+            color: var(--atlas-blue);
+        }
+
+.atlas-moment-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+    .atlas-moment-form-field > span {
+        color: rgba(241, 238, 230, 0.3);
+        font-size: 7px;
+        letter-spacing: 0.12em;
+    }
+
+    .atlas-moment-form-field input,
+    .atlas-moment-form-field textarea {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6px 0 8px;
+        outline: none;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.78);
+        font-size: 9px;
+        color-scheme: dark;
+    }
+
+    .atlas-moment-form-field textarea {
+        min-height: 46px;
+        resize: vertical;
+        line-height: 1.45;
+    }
+
+        .atlas-moment-form-field input:focus,
+        .atlas-moment-form-field textarea:focus {
+            border-bottom-color: rgba(39, 199, 255, 0.42);
+        }
+
+        .atlas-moment-form-field input::placeholder,
+        .atlas-moment-form-field textarea::placeholder {
+            color: rgba(241, 238, 230, 0.2);
+        }
+
+.atlas-moment-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 4px;
+}
+
+    .atlas-moment-form-actions button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.34);
+        font-size: 7px;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+    }
+
+        .atlas-moment-form-actions button:first-child {
+            color: var(--atlas-blue);
+        }
+
+        .atlas-moment-form-actions button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-moment-form-actions button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+/* =========================================
+   DATE-LOCKED TEMPORAL STATE
+
+   Blue = authored / conceptual state.
+   Muted red = dated temporal fact.
+========================================= */
+
+.atlas-state-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.atlas-state-lock-label {
+    color: rgba(190, 96, 84, 0.74) !important;
+    font-size: 6px !important;
+    letter-spacing: 0.14em !important;
+}
+
+.atlas-state-field.is-date-locked .atlas-state-options {
+    opacity: 0.92;
+}
+
+    .atlas-state-field.is-date-locked .atlas-state-options button {
+        cursor: default;
+        color: rgba(241, 238, 230, 0.15);
+        border-color: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.006);
+        box-shadow: none;
+    }
+
+        .atlas-state-field.is-date-locked .atlas-state-options button:disabled {
+            opacity: 1;
+        }
+
+        .atlas-state-field.is-date-locked .atlas-state-options button.is-active {
+            color: rgba(222, 126, 111, 0.9);
+            border-color: rgba(169, 72, 62, 0.48);
+            background: linear-gradient( 180deg, rgba(137, 52, 45, 0.13), rgba(73, 27, 24, 0.035) );
+            box-shadow: inset 0 0 14px rgba(159, 57, 48, 0.06), 0 0 14px rgba(134, 45, 38, 0.06);
+        }
+
+            .atlas-state-field.is-date-locked .atlas-state-options button.is-active:hover {
+                color: rgba(222, 126, 111, 0.9);
+                border-color: rgba(169, 72, 62, 0.48);
+            }
+
+.atlas-moment-summary--multi {
+    padding-bottom: 1px;
+}
+
+    .atlas-moment-summary--multi .atlas-moment-summary-notes {
+        color: rgba(190, 96, 84, 0.6);
+        font-size: 7px;
+        letter-spacing: 0.09em;
+    }
+
+/* =========================================
+   LIFE ATLAS
+   CURRENT UI ARCHITECTURE
+   -----------------------------------------
+   This layer intentionally changes only:
+   - horizontal world mode bar
+   - yellow ADD state
+   - roomier right workspace
+   - Pin header / tabs / menu
+   - section-specific workspace visibility
+   - larger pull-out affordance
+   - larger readable typography
+========================================= */
+
+/* =========================================
+   PRIMARY MODE BAR
+========================================= */
+
+.atlas-time-controls.atlas-time-controls--horizontal {
+    top: 28px;
+    left: calc( (
+                100vw -
+                var(
+                    --atlas-panel-width,
+                    0px
+                )
+            ) / 2 );
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    overflow: visible;
+    border: 1px solid rgba( 39, 199, 255, 0.18 );
+    border-radius: 8px;
+    background: rgba( 7, 11, 16, 0.76 );
+    backdrop-filter: blur(14px);
+}
+
+.atlas-time-controls--horizontal > button {
+    min-width: 94px;
+    min-height: 48px;
+    padding: 0 20px;
+    border: 0;
+    border-right: 1px solid rgba( 141, 228, 255, 0.11 );
+    background: transparent;
+    color: rgba( 141, 228, 255, 0.58 );
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+
+    .atlas-time-controls--horizontal > button:last-of-type {
+        border-right: 0;
+    }
+
+    .atlas-time-controls--horizontal > button:hover {
+        color: var(--atlas-blue-soft);
+    }
+
+    .atlas-time-controls--horizontal > button.is-active {
+        color: var(--atlas-blue);
+        background: rgba( 39, 199, 255, 0.055 );
+        box-shadow: inset 0 -2px 0 rgba( 39, 199, 255, 0.72 );
+        text-shadow: 0 0 12px rgba( 39, 199, 255, 0.28 );
+    }
+
+.atlas-time-controls--horizontal
+.atlas-mode-add {
+    color: rgba( 255, 213, 74, 0.74 );
+}
+
+    .atlas-time-controls--horizontal
+    .atlas-mode-add:hover,
+    .atlas-time-controls--horizontal
+    .atlas-mode-add.is-active {
+        color: var(--atlas-crossroad);
+        background: rgba( 255, 213, 74, 0.05 );
+        box-shadow: inset 0 -2px 0 rgba( 255, 213, 74, 0.8 );
+        text-shadow: 0 0 14px rgba( 255, 213, 74, 0.28 );
+    }
+
+/*
+  Present lens remains the same mechanic,
+  but now lives directly under the horizontal bar.
+*/
+.atlas-time-controls--horizontal
+.atlas-present-lens {
+    top: 60px;
+}
+
+/* =========================================
+   COLLECTIONS
+========================================= */
+
+/*
+  ADD now lives in the top mode bar.
+  The left side can breathe as Collection navigation.
+*/
+.atlas-drawer {
+    top: 104px;
+}
+
+.atlas-drawer-content {
+    padding: 24px 22px 30px;
+}
+
+.atlas-drawer-heading {
+    margin-bottom: 18px;
+    font-size: 10px;
+}
+
+.atlas-collection-list button {
+    font-size: 11px;
+}
+
+.atlas-collection-list > div > div:first-child > button:first-child {
+    font-size: 18px;
+    line-height: 1;
+    color: rgba( 141, 228, 255, 0.68 );
+}
+
+/* =========================================
+   RIGHT WORKSPACE
+========================================= */
+
+.atlas-panel,
+.atlas-guide-panel {
+    width: var( --atlas-panel-width, 430px );
+}
+
+.atlas-panel-scroll {
+    inset: 0 0 74px 0;
+    padding: 30px 30px 54px;
+}
+
+/* =========================================
+   PIN HEADER
+========================================= */
+
+.atlas-pin-header {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.atlas-pin-header-copy {
+    min-width: 0;
+}
+
+.atlas-pin-header-kicker {
+    margin-bottom: 7px;
+    color: rgba( 39, 199, 255, 0.58 );
+    font-size: 10px;
+    letter-spacing: 0.22em;
+}
+
+.atlas-pin-header-title {
+    overflow: hidden;
+    color: rgba( 241, 238, 230, 0.94 );
+    font-size: clamp( 22px, 2vw, 29px );
+    font-weight: 500;
+    line-height: 1.12;
+    letter-spacing: 0.015em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-pin-menu-wrap {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.atlas-pin-menu-button {
+    appearance: none;
+    width: 44px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: rgba( 241, 238, 230, 0.58 );
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+    .atlas-pin-menu-button:hover {
+        color: var(--atlas-blue-soft);
+    }
+
+.atlas-pin-menu {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    z-index: 30;
+    min-width: 158px;
+    padding: 6px;
+    border: 1px solid rgba( 39, 199, 255, 0.2 );
+    background: rgba( 7, 11, 16, 0.985 );
+    box-shadow: 0 16px 38px rgba( 0, 0, 0, 0.42 );
+}
+
+    .atlas-pin-menu button {
+        appearance: none;
+        display: block;
+        width: 100%;
+        padding: 10px 11px;
+        border: 0;
+        background: transparent;
+        color: rgba( 241, 238, 230, 0.62 );
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .atlas-pin-menu button:hover {
+            color: var(--atlas-blue);
+            background: rgba( 39, 199, 255, 0.045 );
+        }
+
+        .atlas-pin-menu
+        button.is-danger:hover {
+            color: rgba( 255, 145, 145, 0.95 );
+        }
+
+/* =========================================
+   PIN TABS
+========================================= */
+
+.atlas-pin-tabs {
+    display: grid;
+    grid-template-columns: repeat( 4, minmax( 0, 1fr ) );
+    margin: 0 -4px 30px;
+    border-bottom: 1px solid rgba( 141, 228, 255, 0.12 );
+}
+
+    .atlas-pin-tabs button {
+        appearance: none;
+        position: relative;
+        min-height: 50px;
+        border: 0;
+        background: transparent;
+        color: rgba( 241, 238, 230, 0.46 );
+        font-size: 12px;
+        letter-spacing: 0.075em;
+        cursor: pointer;
+    }
+
+        .atlas-pin-tabs button:hover {
+            color: rgba( 141, 228, 255, 0.84 );
+        }
+
+        .atlas-pin-tabs
+        button.is-active {
+            color: var(--atlas-blue-soft);
+        }
+
+            .atlas-pin-tabs
+            button.is-active::after {
+                content: "";
+                position: absolute;
+                left: 10%;
+                right: 10%;
+                bottom: -1px;
+                height: 2px;
+                background: var(--atlas-blue);
+                box-shadow: 0 0 12px rgba( 39, 199, 255, 0.5 );
+            }
+
+        .atlas-pin-tabs
+        button span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            margin-left: 7px;
+            padding: 0 5px;
+            border-radius: 6px;
+            background: rgba( 39, 199, 255, 0.075 );
+            color: rgba( 141, 228, 255, 0.62 );
+            font-size: 10px;
+        }
+
+.atlas-tab-panel.is-hidden {
+    display: none !important;
+}
+
+/* =========================================
+   ROOMIER TYPOGRAPHY / CONTENT
+========================================= */
+
+.atlas-field {
+    gap: 11px;
+    margin-bottom: 28px;
+}
+
+    .atlas-field > span,
+    .atlas-content-heading {
+        font-size: 10px;
+        letter-spacing: 0.17em;
+    }
+
+    .atlas-field input,
+    .atlas-field textarea,
+    .atlas-field select {
+        font-size: 14px;
+    }
+
+    .atlas-field textarea {
+        min-height: 108px;
+    }
+
+.atlas-state-options,
+.atlas-panel-collections {
+    gap: 9px;
+}
+
+    .atlas-state-options button,
+    .atlas-panel-collections button {
+        padding: 9px 11px;
+        font-size: 10px;
+    }
+
+.atlas-content {
+    margin-bottom: 30px;
+    padding-top: 18px;
+}
+
+.atlas-content-heading-row {
+    margin-bottom: 18px;
+}
+
+.atlas-content-count {
+    font-size: 9px;
+}
+
+.atlas-content-tool-title {
+    font-size: 12px;
+}
+
+.atlas-folder-title {
+    font-size: 11px;
+}
+
+.atlas-media-name {
+    font-size: 13px;
+}
+
+.atlas-media-preview img,
+.atlas-media-preview video {
+    max-height: 520px;
+}
+
+/* =========================================
+   TAB-SPECIFIC BOTTOM ACTIONS
+========================================= */
+
+/*
+  The fixed bar now only renders for Overview
+  or while creating a new Pin. Content and People
+  use their own local actions inside the tab.
+*/
+.atlas-panel-actions {
+    height: 74px;
+    padding: 0 30px;
+}
+
+    .atlas-panel-actions button {
+        font-size: 10px;
+    }
+
+/* =========================================
+   BIGGER PULL-OUT AFFORDANCE
+========================================= */
+
+/*
+  Rail geometry is intentionally controlled
+  by the primary resize section above.
+
+  The rail stays narrow at the panel boundary,
+  while the arrow floats outside the panel.
+*/
+
+.atlas-panel-resizer-chevron-group > span {
+    margin-right: -13px;
+    font-size: 68px;
+    font-weight: 180;
+    line-height: 0.64;
+}
+
+    .atlas-panel-resizer-chevron-group > span:last-child {
+        margin-right: 0;
+    }
+
+/* =========================================
+   RESPONSIVE FALLBACK
+========================================= */
+
+@media (max-width: 980px) {
+    .atlas-time-controls--horizontal > button {
+        min-width: 72px;
+        padding: 0 12px;
+        font-size: 11px;
+    }
+
+    .atlas-panel-scroll {
+        padding-left: 22px;
+        padding-right: 22px;
+    }
+
+    .atlas-pin-header-title {
+        font-size: 21px;
+    }
+}
+
+
+/* =========================================
+   GOOGLE PLACE SEARCH V1
+========================================= */
+
+.atlas-place-search {
+    position: relative;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.atlas-place-search-label {
+    margin-bottom: 9px;
+    color: rgba(241, 238, 230, 0.38);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+}
+
+.atlas-place-search-input-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    align-items: center;
+    border-bottom: 1px solid rgba(39, 199, 255, 0.2);
+}
+
+    .atlas-place-search-input-wrap input {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        padding: 9px 0 10px;
+        outline: none;
+        background: transparent;
+        color: var(--atlas-text);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+    }
+
+        .atlas-place-search-input-wrap input::placeholder {
+            color: rgba(241, 238, 230, 0.24);
+        }
+
+    .atlas-place-search-input-wrap button {
+        appearance: none;
+        width: 30px;
+        height: 30px;
+        border: 0;
+        background: transparent;
+        color: rgba(39, 199, 255, 0.62);
+        text-align: center;
+        cursor: pointer;
+    }
+
+        .atlas-place-search-input-wrap button:hover {
+            color: var(--atlas-blue);
+        }
+
+        .atlas-place-search-input-wrap button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+.atlas-place-results {
+    position: absolute;
+    top: calc(100% - 15px);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-height: 290px;
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid rgba(39, 199, 255, 0.2);
+    background: rgba(7, 11, 16, 0.985);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.46);
+    backdrop-filter: blur(16px);
+}
+
+    .atlas-place-results > button {
+        appearance: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        width: 100%;
+        padding: 11px 10px;
+        border: 0;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.78);
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .atlas-place-results > button:hover,
+        .atlas-place-results > button.is-selected {
+            background: rgba(39, 199, 255, 0.055);
+        }
+
+        .atlas-place-results > button span,
+        .atlas-place-selected span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .atlas-place-results > button span {
+            font-size: 11px;
+        }
+
+        .atlas-place-results > button small,
+        .atlas-place-selected small {
+            overflow: hidden;
+            color: rgba(141, 228, 255, 0.38);
+            font-size: 8px;
+            line-height: 1.4;
+            letter-spacing: 0.04em;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+.atlas-place-results-state {
+    padding: 13px 10px;
+    color: rgba(241, 238, 230, 0.28);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+}
+
+    .atlas-place-results-state.is-error {
+        color: rgba(255, 135, 135, 0.76);
+    }
+
+.atlas-place-selected {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    margin-top: 9px;
+    padding: 8px 9px;
+    border: 1px solid rgba(39, 199, 255, 0.16);
+    background: rgba(39, 199, 255, 0.025);
+    color: var(--atlas-blue-soft);
+    text-align: left;
+    cursor: pointer;
+}
+
+    .atlas-place-selected span {
+        font-size: 10px;
+    }
+
+/* GOOGLE PLACE TEMPORARY MARKER */
+
+.atlas-marker--place-preview {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--atlas-crossroad);
+    background: rgba(255, 213, 74, 0.16);
+    box-shadow: 0 0 0 5px rgba(255, 213, 74, 0.08), 0 0 22px rgba(255, 213, 74, 0.68);
+    animation: atlas-place-preview-pulse 1.35s ease-in-out infinite;
+}
+
+@keyframes atlas-place-preview-pulse {
+    0%, 100% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 4px rgba(255, 213, 74, 0.08), 0 0 16px rgba(255, 213, 74, 0.48);
+    }
+
+    50% {
+        transform: scale(1.12);
+        box-shadow: 0 0 0 10px rgba(255, 213, 74, 0.015), 0 0 30px rgba(255, 213, 74, 0.8);
+    }
+}
+
+/* ADD READY FEEDBACK */
+
+.atlas-time-controls--horizontal
+.atlas-mode-add.is-place-ready {
+    color: var(--atlas-crossroad);
+    background: rgba(255, 213, 74, 0.075);
+    animation: atlas-add-place-ready 1.15s ease-in-out infinite;
+}
+
+@keyframes atlas-add-place-ready {
+    0%, 100% {
+        box-shadow: inset 0 -2px 0 rgba(255, 213, 74, 0.64), 0 0 0 rgba(255, 213, 74, 0);
+        text-shadow: 0 0 10px rgba(255, 213, 74, 0.2);
+    }
+
+    50% {
+        box-shadow: inset 0 -2px 0 rgba(255, 213, 74, 1), 0 0 18px rgba(255, 213, 74, 0.2);
+        text-shadow: 0 0 18px rgba(255, 213, 74, 0.5);
+    }
+}
+
+/* GOOGLE PLACE IDENTITY IN PIN */
+
+.atlas-place-identity {
+    margin: -12px 0 26px;
+    padding: 10px 12px;
+    border-left: 2px solid rgba(39, 199, 255, 0.34);
+    background: rgba(39, 199, 255, 0.025);
+}
+
+.atlas-place-identity-label {
+    margin-bottom: 5px;
+    color: rgba(39, 199, 255, 0.52);
+    font-size: 8px;
+    letter-spacing: 0.16em;
+}
+
+.atlas-place-identity-address {
+    color: rgba(241, 238, 230, 0.62);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+
+/* =========================================
+   TASKS V1 / HOW-LITE
+========================================= */
+
+.atlas-tasks {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.atlas-task-create {
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+    .atlas-task-create input {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(39, 199, 255, 0.24);
+        padding: 10px 0 11px;
+        outline: none;
+        background: transparent;
+        color: var(--atlas-text);
+        font-size: 14px;
+    }
+
+        .atlas-task-create input::placeholder {
+            color: rgba(241, 238, 230, 0.24);
+        }
+
+        .atlas-task-create input:focus {
+            border-bottom-color: rgba(39, 199, 255, 0.64);
+        }
+
+.atlas-task-create-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+    .atlas-task-create-meta span {
+        color: rgba(241, 238, 230, 0.22);
+        font-size: 8px;
+        letter-spacing: 0.08em;
+    }
+
+    .atlas-task-create-meta button,
+    .atlas-task-actions button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(39, 199, 255, 0.68);
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+    }
+
+        .atlas-task-create-meta button:hover,
+        .atlas-task-actions button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-task-create-meta button:disabled,
+        .atlas-task-actions button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+.atlas-task-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.atlas-task-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    min-height: 48px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.atlas-task-check {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgba(141, 228, 255, 0.34);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--atlas-blue);
+    cursor: pointer;
+}
+
+    .atlas-task-check span {
+        display: block;
+        width: 7px;
+        height: 7px;
+    }
+
+    .atlas-task-check:hover {
+        border-color: var(--atlas-blue);
+        box-shadow: 0 0 10px rgba(39, 199, 255, 0.16);
+    }
+
+    .atlas-task-check.is-complete {
+        border-color: rgba(39, 199, 255, 0.48);
+        background: rgba(39, 199, 255, 0.08);
+    }
+
+        .atlas-task-check.is-complete span {
+            width: auto;
+            height: auto;
+            font-size: 10px;
+            line-height: 1;
+        }
+
+.atlas-task-title {
+    appearance: none;
+    min-width: 0;
+    overflow: hidden;
+    border: 0;
+    padding: 8px 0;
+    background: transparent;
+    color: rgba(241, 238, 230, 0.82);
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: text;
+}
+
+.atlas-task-row.is-complete .atlas-task-title {
+    color: rgba(241, 238, 230, 0.34);
+    text-decoration: line-through;
+    text-decoration-color: rgba(141, 228, 255, 0.28);
+}
+
+.atlas-task-rename-input {
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid rgba(39, 199, 255, 0.48);
+    padding: 8px 0;
+    outline: none;
+    background: transparent;
+    color: var(--atlas-text);
+    font-size: 12px;
+}
+
+.atlas-task-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .atlas-task-actions .atlas-task-delete {
+        color: rgba(241, 238, 230, 0.24);
+    }
+
+        .atlas-task-actions .atlas-task-delete:hover {
+            color: rgba(255, 145, 145, 0.9);
+        }
+
+.atlas-task-completed {
+    margin-top: 30px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(141, 228, 255, 0.08);
+}
+
+.atlas-task-completed-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: rgba(241, 238, 230, 0.28);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+}
+
+    .atlas-task-completed-heading span {
+        color: rgba(141, 228, 255, 0.28);
+    }
+
+/* =========================================
+   STARFIELD VISIBILITY FIX V2
+   -----------------------------------------
+   The previous star layer sat behind the
+   MapLibre canvas and remained invisible.
+
+   This puts the stars inside the viewport
+   ABOVE the WebGL canvas but BELOW Atlas UI.
+   It is pointer-events:none, so all map
+   interaction remains intact.
+========================================= */
+
+.atlas-viewport {
+    isolation: isolate;
+}
+
+    .atlas-viewport::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        /*
+      Keep stars strongest in deep space and
+      softer across the globe itself.
+    */
+        -webkit-mask-image: radial-gradient( circle at calc( (
+                    100vw -
+                    var(
+                        --atlas-panel-width,
+                        0px
+                    )
+                ) / 2 ) 50%, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.24) 30%, rgba(0, 0, 0, 0.72) 48%, black 67%, black 100% );
+        mask-image: radial-gradient( circle at calc( (
+                    100vw -
+                    var(
+                        --atlas-panel-width,
+                        0px
+                    )
+                ) / 2 ) 50%, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.24) 30%, rgba(0, 0, 0, 0.72) 48%, black 67%, black 100% );
+        background-image: radial-gradient( ellipse 3px 15px at 18% 23%, rgba(242, 253, 255, 0.98) 0 24%, rgba(141, 228, 255, 0.40) 25% 52%, transparent 54% ), radial-gradient( ellipse 15px 3px at 18% 23%, rgba(242, 253, 255, 0.98) 0 24%, rgba(141, 228, 255, 0.40) 25% 52%, transparent 54% ), radial-gradient( ellipse 4px 20px at 74% 17%, rgba(236, 251, 255, 1) 0 22%, rgba(141, 228, 255, 0.34) 23% 48%, transparent 50% ), radial-gradient( ellipse 20px 4px at 74% 17%, rgba(236, 251, 255, 1) 0 22%, rgba(141, 228, 255, 0.34) 23% 48%, transparent 50% ), radial-gradient( ellipse 3px 13px at 12% 68%, rgba(235, 251, 255, 0.96) 0 24%, rgba(141, 228, 255, 0.32) 25% 50%, transparent 52% ), radial-gradient( ellipse 13px 3px at 12% 68%, rgba(235, 251, 255, 0.96) 0 24%, rgba(141, 228, 255, 0.32) 25% 50%, transparent 52% ), radial-gradient( ellipse 3px 16px at 88% 61%, rgba(255, 250, 224, 0.98) 0 24%, rgba(255, 216, 74, 0.30) 25% 50%, transparent 52% ), radial-gradient( ellipse 16px 3px at 88% 61%, rgba(255, 250, 224, 0.98) 0 24%, rgba(255, 216, 74, 0.30) 25% 50%, transparent 52% ), radial-gradient( circle, rgba( 239, 252, 255, 0.96 ) 0 1px, transparent 1.2px ), radial-gradient( circle, rgba( 141, 228, 255, 0.78 ) 0 1px, transparent 1.2px ), radial-gradient( circle, rgba( 214, 192, 255, 0.62 ) 0 1px, transparent 1.2px ), radial-gradient( circle, rgba( 255, 231, 152, 0.52 ) 0 1px, transparent 1.2px ), radial-gradient( circle, rgba( 255, 255, 255, 0.98 ) 0 1.7px, transparent 2px ), radial-gradient( circle, rgba( 141, 228, 255, 0.92 ) 0 2px, transparent 2.4px );
+        background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 137px 149px, 181px 163px, 223px 197px, 269px 241px, 347px 311px, 431px 389px;
+        background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 11px 17px, 73px 41px, 29px 101px, 151px 83px, 61px 137px, 211px 47px;
+        filter: drop-shadow( 0 0 2px rgba( 141, 228, 255, 0.38 ) );
+        animation: atlas-visible-star-twinkle 5.6s steps( 4, end ) infinite;
+    }
+
+@keyframes atlas-visible-star-twinkle {
+    0%, 100% {
+        opacity: 0.68;
+    }
+
+    25% {
+        opacity: 0.9;
+    }
+
+    50% {
+        opacity: 0.76;
+    }
+
+    75% {
+        opacity: 0.96;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .atlas-viewport::before {
+        animation: none;
+    }
+}
+
+/* =========================================
+   LIFE ATLAS — PRESENT + PAST DAY / NIGHT
+   -----------------------------------------
+   Built directly on the last working files.
+   Night remains the default.
+
+   /public:
+   present-day.png
+   present-night.png
+   past-day.png
+   past-night.png
+========================================= */
+
+.atlas-scene-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 700ms ease;
+    will-change: opacity;
+}
+
+/* PRESENT NIGHT */
+
+.atlas-scene-backdrop--present-night {
+    background: url("/present-night.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 48%, rgba(91, 107, 145, 0.10) 0%, rgba(7, 9, 13, 0) 42% ), linear-gradient( 180deg, #030914 0%, #04101f 42%, #071b31 72%, #0a3150 100% );
+}
+
+/* PRESENT DAY */
+
+.atlas-scene-backdrop--present-day {
+    background: url("/present-day.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 46%, rgba(148, 220, 255, 0.16) 0%, rgba(148, 220, 255, 0) 48% ), linear-gradient( 180deg, #267fd1 0%, #43aee8 48%, #8bdaf3 78%, #c8eff8 100% );
+}
+
+/* PAST NIGHT */
+
+.atlas-scene-backdrop--past-night {
+    background: url("/past-night.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 48%, rgba(120, 93, 153, 0.10) 0%, rgba(19, 14, 31, 0) 42% ), linear-gradient( 180deg, #08070f 0%, #141023 42%, #231933 72%, #332449 100% );
+}
+
+/* PAST DAY */
+
+.atlas-scene-backdrop--past-day {
+    background: url("/past-day.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 46%, rgba(218, 201, 166, 0.12) 0%, rgba(218, 201, 166, 0) 50% ), linear-gradient( 180deg, #8f9894 0%, #a4a79b 48%, #b7ad98 78%, #c8b89e 100% );
+}
+
+
+
+/* FUTURE NIGHT */
+
+.atlas-scene-backdrop--future-night {
+    background: url("/future-night.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 46%, rgba(224, 96, 255, 0.16) 0%, rgba(224, 96, 255, 0) 44% ), linear-gradient( 180deg, #12071f 0%, #24103a 36%, #42145c 66%, #6a1d75 100% );
+}
+
+/* FUTURE DAY */
+
+.atlas-scene-backdrop--future-day {
+    background: url("/future-day.png") bottom center / 100% 18vh no-repeat, radial-gradient( circle at 50% 42%, rgba(255, 188, 236, 0.22) 0%, rgba(255, 188, 236, 0) 48% ), linear-gradient( 180deg, #f3a6d7 0%, #de86da 28%, #a97bdf 52%, #7394e7 74%, #57b9ee 100% );
+}
+
+
+/* PAST gets its own scene pair. */
+
+.atlas--world-past.atlas--night
+.atlas-scene-backdrop--past-night {
+    opacity: 1;
+}
+
+.atlas--world-past.atlas--day
+.atlas-scene-backdrop--past-day {
+    opacity: 1;
+}
+
+/* FUTURE gets its own scene pair. */
+
+.atlas--world-future.atlas--night
+.atlas-scene-backdrop--future-night {
+    opacity: 1;
+}
+
+.atlas--world-future.atlas--day
+.atlas-scene-backdrop--future-day {
+    opacity: 1;
+}
+
+/* ALL + PRESENT keep the working Present pair. */
+
+.atlas:not(.atlas--world-past):not(.atlas--world-future).atlas--night
+.atlas-scene-backdrop--present-night {
+    opacity: 1;
+}
+
+.atlas:not(.atlas--world-past):not(.atlas--world-future).atlas--day
+.atlas-scene-backdrop--present-day {
+    opacity: 1;
+}
+
+/* Existing stars stay. Day fades them away. */
+
+.atlas-viewport::before {
+    transition: opacity 850ms ease;
+}
+
+.atlas--day
+.atlas-viewport::before {
+    animation: none;
+    opacity: 0;
+}
+
+/* DAY / NIGHT TOGGLE
+   Pin workspace is z-index 40, so the toggle
+   stays underneath it while a pin is open.
+*/
+
+.atlas-day-night-toggle {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(39, 199, 255, 0.22);
+    border-radius: 8px;
+    background: rgba(7, 11, 16, 0.76);
+    backdrop-filter: blur(14px);
+}
+
+    .atlas-day-night-toggle button {
+        appearance: none;
+        min-width: 72px;
+        height: 42px;
+        border: 0;
+        border-right: 1px solid rgba(141, 228, 255, 0.10);
+        padding: 0 14px;
+        background: transparent;
+        color: rgba(141, 228, 255, 0.46);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        transition: color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+    }
+
+        .atlas-day-night-toggle button:last-child {
+            border-right: 0;
+        }
+
+        .atlas-day-night-toggle button:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-day-night-toggle button.is-active {
+            color: var(--atlas-blue);
+            background: rgba(39, 199, 255, 0.055);
+            box-shadow: inset 0 -2px 0 rgba(39, 199, 255, 0.72);
+        }
+
+@media (prefers-reduced-motion: reduce) {
+    .atlas-scene-backdrop,
+    .atlas-viewport::before {
+        transition: none;
+    }
+}
+
+/* =========================================
+   PASS 05B — PIN WORKSPACE SIGIL TABS
+
+   Compact at rest.
+   Active = illuminated.
+   Hover/focus = expands to teach the label.
+========================================= */
+
+.atlas-pin-tabs {
+    display: flex !important;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 7px !important;
+    margin: 0 0 30px !important;
+    padding: 0 0 9px;
+    border-bottom: 1px solid rgba(141, 228, 255, 0.10);
+    overflow: visible;
+}
+
+    .atlas-pin-tabs .atlas-pin-tab {
+        appearance: none;
+        position: relative;
+        flex: 0 0 54px;
+        width: 54px;
+        min-width: 54px;
+        max-width: 54px;
+        min-height: 50px !important;
+        height: 50px;
+        padding: 0 15px;
+        border: 1px solid rgba(241, 238, 230, 0.10) !important;
+        border-radius: 8px !important;
+        background: rgba(241, 238, 230, 0.035) !important;
+        color: rgba(241, 238, 230, 0.34) !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        overflow: hidden;
+        cursor: pointer;
+        transition: flex-basis 180ms ease, width 180ms ease, max-width 180ms ease, padding 180ms ease, gap 180ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+        .atlas-pin-tabs .atlas-pin-tab::after {
+            display: none !important;
+        }
+
+        .atlas-pin-tabs .atlas-pin-tab:hover,
+        .atlas-pin-tabs .atlas-pin-tab:focus-visible {
+            flex-basis: 132px;
+            width: 132px;
+            max-width: 132px;
+            gap: 10px;
+            justify-content: flex-start;
+            border-color: rgba(141, 228, 255, 0.24) !important;
+            background: rgba(141, 228, 255, 0.055) !important;
+            color: rgba(141, 228, 255, 0.78) !important;
+            outline: none;
+        }
+
+        .atlas-pin-tabs .atlas-pin-tab:active {
+            transform: translateY(1px);
+        }
+
+        .atlas-pin-tabs .atlas-pin-tab.is-active {
+            border-color: rgba(39, 199, 255, 0.52) !important;
+            background: linear-gradient( 180deg, rgba(39, 199, 255, 0.12), rgba(39, 199, 255, 0.055) ) !important;
+            color: var(--atlas-blue-soft) !important;
+            box-shadow: inset 0 0 18px rgba(39, 199, 255, 0.055), 0 0 14px rgba(39, 199, 255, 0.08);
+        }
+
+    .atlas-pin-tabs .atlas-pin-tab-label {
+        display: block !important;
+        min-width: 0 !important;
+        width: 0;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: currentColor !important;
+        opacity: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        font-size: 9px !important;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.13em;
+        transform: translateX(-4px);
+        transition: width 180ms ease, opacity 120ms ease, transform 180ms ease;
+    }
+
+    .atlas-pin-tabs .atlas-pin-tab:hover .atlas-pin-tab-label,
+    .atlas-pin-tabs .atlas-pin-tab:focus-visible .atlas-pin-tab-label {
+        width: auto;
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .atlas-pin-tabs .atlas-pin-tab-sigil {
+        flex: 0 0 22px;
+        width: 22px;
+        min-width: 22px !important;
+        height: 22px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: currentColor !important;
+        position: relative;
+        display: block !important;
+    }
+
+/* Overview: four-pane atlas/dashboard sigil */
+.atlas-pin-tab-sigil--overview {
+    display: grid !important;
+    grid-template-columns: repeat(2, 6px);
+    grid-template-rows: repeat(2, 6px);
+    place-content: center;
+    gap: 3px;
+}
+
+    .atlas-pin-tab-sigil--overview > span {
+        display: block !important;
+        min-width: 0 !important;
+        width: 6px !important;
+        height: 6px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 1px solid currentColor;
+        border-radius: 1px !important;
+        background: transparent !important;
+    }
+
+/* Content: familiar play/media sigil */
+.atlas-pin-tab-sigil--content::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 4px;
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 11px solid currentColor;
+}
+
+/* People: deliberately circular head, not an oval */
+.atlas-pin-tab-person-head {
+    position: absolute !important;
+    top: 1px;
+    left: 50%;
+    width: 8px !important;
+    min-width: 8px !important;
+    height: 8px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: translateX(-50%);
+    border: 1px solid currentColor;
+    border-radius: 50% !important;
+    background: transparent !important;
+}
+
+.atlas-pin-tab-person-body {
+    position: absolute !important;
+    left: 50%;
+    bottom: 1px;
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 9px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: translateX(-50%);
+    border: 1px solid currentColor;
+    border-radius: 9px 9px 3px 3px !important;
+    background: transparent !important;
+}
+
+/* Tasks: compact notepad sigil */
+.atlas-pin-tab-sigil--tasks {
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 22px !important;
+    border: 1px solid currentColor;
+    border-radius: 2px !important;
+}
+
+    .atlas-pin-tab-sigil--tasks > span {
+        position: absolute !important;
+        left: 4px;
+        right: 4px;
+        top: 6px;
+        width: auto !important;
+        min-width: 0 !important;
+        height: 1px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        background: currentColor !important;
+        box-shadow: 0 5px 0 currentColor, 0 10px 0 currentColor;
+    }
+
+
+
+/* =========================================
+   PASS 05C — OVERVIEW CLEANUP
+========================================= */
+
+.atlas-pin-header-title-input {
+    appearance: none;
+    width: min(100%, 360px);
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .atlas-pin-header-title-input:hover {
+        border-bottom-color: rgba(141, 228, 255, 0.18);
+    }
+
+    .atlas-pin-header-title-input:focus {
+        border-bottom-color: rgba(39, 199, 255, 0.58);
+        background: rgba(39, 199, 255, 0.025);
+    }
+
+.atlas-pin-description {
+    position: relative;
+    display: block;
+    margin: 0 0 22px;
+}
+
+    .atlas-pin-description textarea {
+        width: 100%;
+        min-height: 72px;
+        resize: vertical;
+        box-sizing: border-box;
+        padding: 13px 14px 22px;
+        border: 1px solid rgba(241, 238, 230, 0.10);
+        border-radius: 7px;
+        outline: none;
+        background: rgba(241, 238, 230, 0.025);
+        color: rgba(241, 238, 230, 0.78);
+        font: inherit;
+        line-height: 1.55;
+        transition: border-color 150ms ease, background 150ms ease;
+    }
+
+        .atlas-pin-description textarea::placeholder {
+            color: rgba(241, 238, 230, 0.25);
+        }
+
+        .atlas-pin-description textarea:focus {
+            border-color: rgba(39, 199, 255, 0.30);
+            background: rgba(39, 199, 255, 0.025);
+        }
+
+.atlas-pin-description-count {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    color: rgba(241, 238, 230, 0.18);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    pointer-events: none;
+}
+
+.atlas-state-field {
+    margin-top: 0 !important;
+}
+
+.atlas-pin-notes {
+    margin-top: 2px;
+    border-top: 1px solid rgba(241, 238, 230, 0.07);
+}
+
+.atlas-pin-notes-toggle {
+    appearance: none;
+    width: 100%;
+    min-height: 46px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(241, 238, 230, 0.42);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    cursor: pointer;
+    transition: color 150ms ease;
+}
+
+    .atlas-pin-notes-toggle:hover,
+    .atlas-pin-notes-toggle.is-open {
+        color: rgba(141, 228, 255, 0.72);
+    }
+
+.atlas-pin-notes-arrow {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1;
+    transform: rotate(0deg);
+    transition: transform 160ms ease;
+}
+
+.atlas-pin-notes-toggle.is-open .atlas-pin-notes-arrow {
+    transform: rotate(90deg);
+}
+
+.atlas-pin-notes-textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    box-sizing: border-box;
+    margin: 0 0 20px;
+    padding: 13px 14px;
+    border: 1px solid rgba(241, 238, 230, 0.09);
+    border-radius: 7px;
+    outline: none;
+    background: rgba(241, 238, 230, 0.022);
+    color: rgba(241, 238, 230, 0.72);
+    font: inherit;
+    line-height: 1.6;
+}
+
+    .atlas-pin-notes-textarea::placeholder {
+        color: rgba(241, 238, 230, 0.22);
+    }
+
+    .atlas-pin-notes-textarea:focus {
+        border-color: rgba(39, 199, 255, 0.28);
+    }
+
+
+/* =========================================
+   PASS 05D — MOMENT FOCUS
+   One Moment at a time.
+   Moment detail/form stays visually attached
+   to the Moment ribbon instead of becoming a
+   separated section.
+========================================= */
+
+.atlas-moment-summary {
+    margin-top: 12px !important;
+    padding: 0 0 2px !important;
+    border-top: 0 !important;
+}
+
+.atlas-moment-form {
+    margin-top: 12px !important;
+    padding: 0 0 2px !important;
+    border-top: 0 !important;
+}
+
+/* Save/CANCEL now live in the persistent bottom action bar. */
+.atlas-moment-form-actions {
+    display: none !important;
+}
+
+
+/* =========================================
+   PASS 06 — SPATIAL EDIT PIN
+========================================= */
+
+.atlas-marker--reposition {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    border-radius: 50%;
+    background: rgba(39, 199, 255, 0.32);
+    color: #ffffff;
+    cursor: grab;
+    box-shadow: 0 0 0 5px rgba(39, 199, 255, 0.10), 0 0 20px rgba(39, 199, 255, 0.78);
+    transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+    .atlas-marker--reposition::before,
+    .atlas-marker--reposition::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        pointer-events: none;
+        background: rgba(255, 255, 255, 0.78);
+        transform: translate(-50%, -50%);
+    }
+
+    .atlas-marker--reposition::before {
+        width: 30px;
+        height: 1px;
+    }
+
+    .atlas-marker--reposition::after {
+        width: 1px;
+        height: 30px;
+    }
+
+    .atlas-marker--reposition:hover {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 6px rgba(39, 199, 255, 0.12), 0 0 24px rgba(39, 199, 255, 0.88);
+    }
+
+    .atlas-marker--reposition:active {
+        cursor: grabbing;
+    }
+
+
+/* =========================================
+   PASS 07 — OPTIONAL PIN COVER ON HOVER
+
+   Marker geometry is intentionally untouched.
+   No hitbox, size, position, or click changes.
+
+   Pins without a cover keep the existing
+   name-only hover label.
+
+   Pins with a parent cover image expand that
+   same hover label into a compact image card.
+========================================= */
+
+.atlas-marker-label--with-image {
+    width: 176px;
+    max-width: 176px;
+    padding: 0;
+    overflow: hidden;
+    white-space: normal;
+    border-color: rgba(39, 199, 255, 0.22);
+    background: rgba(7, 11, 16, 0.97);
+}
+
+.atlas-marker-label-image {
+    display: block;
+    width: 100%;
+    height: 108px;
+    object-fit: cover;
+    background: #07090d;
+}
+
+.atlas-marker-label-title {
+    display: block;
+    padding: 8px 10px 9px;
+    overflow: hidden;
+    color: rgba(241, 238, 230, 0.88);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   PASS 09B — FUTURE PARENT / SUBMENU
+
+   FUTURE remains the parent mode.
+   The small yellow arrow only communicates
+   that a deeper planning layer exists.
+========================================= */
+
+.atlas-future-parent {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+    .atlas-future-parent > button:first-child {
+        padding-right: 2px;
+    }
+
+.atlas-future-arrow {
+    min-width: 16px !important;
+    padding: 2px 0 2px 1px !important;
+    color: rgba(242, 232, 74, 0.55) !important;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(242, 232, 74, 0.10);
+}
+
+    .atlas-future-arrow span {
+        display: inline-block;
+        transform: translateY(-1px) rotate(0deg);
+        transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms ease, text-shadow 150ms ease;
+    }
+
+    .atlas-future-arrow:hover {
+        color: rgba(255, 245, 88, 0.92) !important;
+        text-shadow: 0 0 10px rgba(255, 241, 72, 0.34);
+    }
+
+        .atlas-future-arrow:hover span {
+            transform: translateY(1px) rotate(0deg);
+        }
+
+    .atlas-future-arrow.is-open span {
+        transform: translateY(1px) rotate(180deg);
+    }
+
+    .atlas-future-arrow.is-open:hover span {
+        transform: translateY(-1px) rotate(180deg);
+    }
+
+
+/* =========================================
+   PASS 10 — NEW PIN PARITY
+
+   A draft Pin previews the full workspace
+   structure, but Content / People / Tasks
+   remain locked until the Pin is planted.
+========================================= */
+
+.atlas-pin-tabs.is-draft
+.atlas-pin-tab:disabled {
+    opacity: 0.22;
+    cursor: default;
+    filter: grayscale(1);
+}
+
+    .atlas-pin-tabs.is-draft
+    .atlas-pin-tab:disabled:hover {
+        opacity: 0.22;
+    }
+
+.atlas-pin-tabs.is-draft
+.atlas-pin-tab:first-child {
+    opacity: 1;
+}
+
+
+/* =========================================
+   PASS 10B — FUTURE HORIZON YELLOW
+
+   Future's planning layer gets its own
+   neon-yellow visual language while the
+   main Atlas navigation stays cyan.
+========================================= */
+
+.atlas-present-lens button {
+    color: rgba(232, 226, 94, 0.34);
+}
+
+    .atlas-present-lens button:hover {
+        color: rgba(255, 245, 88, 0.82);
+        text-shadow: 0 0 8px rgba(255, 241, 72, 0.18);
+    }
+
+    .atlas-present-lens button.is-active {
+        color: rgba(255, 246, 92, 0.98);
+        text-shadow: 0 0 8px rgba(255, 241, 72, 0.34), 0 0 16px rgba(255, 241, 72, 0.16);
+    }
+
+
+/* =========================================
+   PASS 10C — ORGANIC FUTURE EXPANSION
+
+   The Future control itself grows downward.
+   No detached floating submenu.
+========================================= */
+
+.atlas-future-parent {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 76px;
+    height: 28px;
+    padding: 0 5px;
+    border-radius: 8px;
+    background: rgba(7, 11, 16, 0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    overflow: hidden;
+    transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1), padding 260ms cubic-bezier(0.22, 1, 0.36, 1), background 220ms ease, box-shadow 220ms ease, border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+    .atlas-future-parent.is-active {
+        background: rgba(7, 11, 16, 0.58);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+    }
+
+    .atlas-future-parent.is-open {
+        height: 60px;
+        padding-bottom: 6px;
+        border-radius: 8px 8px 10px 10px;
+        background: rgba(7, 11, 16, 0.90);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24), 0 0 18px rgba(255, 241, 72, 0.035);
+        backdrop-filter: blur(12px);
+    }
+
+.atlas-future-parent-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    flex: 0 0 28px;
+    gap: 1px;
+}
+
+    .atlas-future-parent-row > button:first-child {
+        padding-right: 2px;
+    }
+
+.atlas-future-parent .atlas-present-lens {
+    position: static;
+    top: auto;
+    left: auto;
+    width: 100%;
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    padding: 1px 4px 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 150ms ease 0ms, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 0ms, visibility 0s linear 220ms;
+}
+
+.atlas-future-parent.is-open
+.atlas-present-lens.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition: opacity 180ms ease 65ms, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 45ms, visibility 0s;
+}
+
+.atlas-future-parent
+.atlas-present-lens button {
+    padding: 3px 1px;
+    font-size: 8px;
+    letter-spacing: 0.10em;
+}
+
+.atlas-future-parent.is-open
+.atlas-future-arrow {
+    color: rgba(255, 245, 88, 0.90) !important;
+}
+
+/* Override the old detached submenu geometry. */
+.atlas-time-controls--horizontal
+.atlas-future-parent
+.atlas-present-lens {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+
+/* =========================================
+   PASS 10D — FUTURE BAR EXPANSION FIX
+
+   Preserve the original five equal cells.
+   The TOP BAR itself grows downward.
+   Nothing in the first row changes size or
+   position when Future opens.
+========================================= */
+
+.atlas-time-controls.atlas-time-controls--horizontal {
+    align-items: flex-start;
+    min-height: 48px;
+    padding-bottom: 0;
+    transition: padding-bottom 260ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease, box-shadow 180ms ease;
+}
+
+    /* The existing menu surface itself extends downward. */
+    .atlas-time-controls.atlas-time-controls--horizontal.is-future-menu-open {
+        padding-bottom: 36px;
+        background: rgba(7, 11, 16, 0.90);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20);
+    }
+
+/* Keep ALL / PAST / PRESENT / ADD exactly as before. */
+.atlas-time-controls--horizontal > button {
+    box-sizing: border-box;
+    flex: 0 0 140px;
+    width: 140px;
+    min-width: 140px;
+    height: 72px;
+    min-height: 72px;
+}
+
+/*
+  FUTURE occupies the exact same first-row cell as
+  every other mode. Its submenu is absolute, so
+  opening it can never push or resize the row.
+*/
+.atlas-time-controls--horizontal
+.atlas-future-parent {
+    position: relative;
+    flex: 0 0 140px;
+    width: 140px;
+    min-width: 140px;
+    height: 72px;
+    min-height: 72px;
+    padding: 0;
+    overflow: visible;
+    border-radius: 0;
+    border-right: 1px solid rgba(141, 228, 255, 0.11);
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    transition: none;
+}
+
+    .atlas-time-controls--horizontal
+    .atlas-future-parent.is-open {
+        height: 72px;
+        min-height: 72px;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+/* FUTURE + arrow fill only their normal top-row cell. */
+.atlas-time-controls--horizontal
+.atlas-future-parent-row {
+    width: 100%;
+    height: 72px;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+    /* Match the typography / active feel of the other main modes. */
+    .atlas-time-controls--horizontal
+    .atlas-future-parent-row > button:first-child {
+        min-width: 0 !important;
+        height: 72px;
+        padding: 0 2px 0 0 !important;
+        color: rgba(141, 228, 255, 0.58);
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+    }
+
+        .atlas-time-controls--horizontal
+        .atlas-future-parent-row > button:first-child:hover {
+            color: var(--atlas-blue-soft);
+        }
+
+        .atlas-time-controls--horizontal
+        .atlas-future-parent-row > button:first-child.is-active {
+            color: var(--atlas-blue);
+            text-shadow: 0 0 12px rgba(39, 199, 255, 0.28);
+        }
+
+/* Keep the arrow tiny. */
+.atlas-time-controls--horizontal
+.atlas-future-arrow {
+    width: 16px;
+    min-width: 16px !important;
+    height: 72px;
+    padding: 0 !important;
+}
+
+/*
+  WEEK / MONTH / YEAR sit INSIDE the expanded bar.
+  They are positioned under Future but the dark
+  background is the same continuous top-bar surface.
+*/
+.atlas-time-controls--horizontal
+.atlas-future-parent
+.atlas-present-lens {
+    position: absolute !important;
+    top: 72px !important;
+    left: 50% !important;
+    width: 220px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: transparent;
+    transform: translate(-50%, -5px);
+    z-index: 2;
+}
+
+    .atlas-time-controls--horizontal
+    .atlas-future-parent
+    .atlas-present-lens.is-visible {
+        transform: translate(-50%, 0);
+    }
+
+    /* The submenu stays visually light inside the grown bar. */
+    .atlas-time-controls--horizontal
+    .atlas-future-parent
+    .atlas-present-lens button {
+        min-width: 0;
+        height: 34px;
+        padding: 0 2px;
+        background: transparent;
+    }
+
+/*
+  The old PASS 10C child expansion is now completely
+  neutralized. The parent cell never grows; only the
+  surrounding bar does.
+*/
+.atlas-future-parent.is-active {
+    background: transparent;
+    box-shadow: none;
+}
+
+
+/* =========================================
+   PASS 10E — FUTURE OPACITY / MATERIAL FIX
+
+   Future must use the exact same material as
+   the rest of the primary mode bar.
+
+   No darker pill, no separate opacity layer.
+   Opening Future only changes the bar's height.
+========================================= */
+
+/* Keep the primary bar material identical open or closed. */
+.atlas-time-controls.atlas-time-controls--horizontal,
+.atlas-time-controls.atlas-time-controls--horizontal.is-future-menu-open {
+    background: rgba(7, 11, 16, 0.76) !important;
+    backdrop-filter: blur(14px);
+}
+
+/* Future occupies the same transparent cell as every other mode. */
+.atlas-time-controls--horizontal
+.atlas-future-parent,
+.atlas-time-controls--horizontal
+.atlas-future-parent.is-active,
+.atlas-time-controls--horizontal
+.atlas-future-parent.is-open {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+/* No separate material inside the Future row. */
+.atlas-time-controls--horizontal
+.atlas-future-parent-row,
+.atlas-time-controls--horizontal
+.atlas-future-parent-row > button,
+.atlas-time-controls--horizontal
+.atlas-future-arrow {
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none;
+}
+
+/* Match the same active cell treatment used by ALL/PAST/PRESENT. */
+.atlas-time-controls--horizontal
+.atlas-future-parent.is-active {
+    background: rgba(39, 199, 255, 0.055) !important;
+    box-shadow: inset 0 -2px 0 rgba(39, 199, 255, 0.72) !important;
+}
+
+    /* But keep that active wash flat across the full Future cell. */
+    .atlas-time-controls--horizontal
+    .atlas-future-parent.is-active
+    .atlas-future-parent-row {
+        background: transparent !important;
+    }
+
+/* Expanded submenu remains part of the same bar surface. */
+.atlas-time-controls--horizontal
+.atlas-future-parent
+.atlas-present-lens {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+
+/* Prevent the old organic pass from adding a darker open-state material. */
+.atlas-time-controls--horizontal
+.atlas-future-parent.is-open {
+    backdrop-filter: none !important;
+}
+
+
+/* =========================================
+   PASS 12 — ALL / RETRO DIGITAL OVERVIEW
+
+   ALL is neither Day nor Night visually.
+   Scenic backdrops and starfield disappear,
+   leaving only the original Atlas grid.
+========================================= */
+
+.atlas--world-all
+.atlas-scene-backdrop {
+    opacity: 0 !important;
+}
+
+.atlas--world-all
+.atlas-viewport::before {
+    opacity: 0 !important;
+    animation: none !important;
+}
+
+
+/* =========================================
+   PASS 13B — CINEMATIC ENTRY / WORKING BASELINE
+
+   IMPORTANT:
+   This is layered on top of the exact working
+   globals supplied for this pass. Existing Atlas
+   styling is not redefined or reconstructed.
+========================================= */
+
+/* -----------------------------------------
+   ALL IS OUTSIDE TIME
+
+   Keep only the original dark Atlas grid.
+   No scenic background and no star layer.
+----------------------------------------- */
+
+.atlas--world-all
+.atlas-scene-backdrop {
+    opacity: 0 !important;
+}
+
+.atlas--world-all
+.atlas-viewport::before {
+    opacity: 0 !important;
+    animation: none !important;
+}
+
+/* -----------------------------------------
+   LOGIN TITLE CARD
+----------------------------------------- */
+
+.atlas-entry-card {
+    position: fixed;
+    z-index: 80;
+    left: clamp(52px, 6vw, 112px);
+    top: 50%;
+    width: min(350px, 34vw);
+    transform: translateY(-50%);
+    opacity: 1;
+    pointer-events: auto;
+    transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), opacity 360ms ease;
+}
+
+.atlas--entry-entering
+.atlas-entry-card {
+    transform: translate(-130px, -50%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.atlas--entry-ready
+.atlas-entry-card {
+    display: none;
+}
+
+.atlas-entry-kicker {
+    margin-bottom: 18px;
+    color: rgba(141, 228, 255, 0.56);
+    font-size: 8px;
+    letter-spacing: 0.30em;
+}
+
+.atlas-entry-title {
+    margin: 0;
+    color: rgba(244, 248, 250, 0.92);
+    font-size: clamp(30px, 2.6vw, 42px);
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    line-height: 1;
+}
+
+.atlas-entry-tagline {
+    margin: 24px 0 38px;
+    color: rgba(216, 225, 230, 0.54);
+    font-size: 12px;
+    line-height: 1.75;
+}
+
+.atlas-entry-form {
+    display: grid;
+    gap: 18px;
+    width: min(315px, 100%);
+}
+
+    .atlas-entry-form label {
+        display: grid;
+        gap: 7px;
+    }
+
+        .atlas-entry-form label > span {
+            color: rgba(141, 228, 255, 0.52);
+            font-size: 8px;
+            letter-spacing: 0.18em;
+        }
+
+    .atlas-entry-form input {
+        width: 100%;
+        height: 42px;
+        border: 1px solid rgba(39, 199, 255, 0.20);
+        border-radius: 4px;
+        outline: none;
+        padding: 0 13px;
+        background: rgba(5, 10, 15, 0.72);
+        color: rgba(239, 247, 250, 0.92);
+    }
+
+        .atlas-entry-form input:focus {
+            border-color: rgba(39, 199, 255, 0.70);
+            box-shadow: 0 0 18px rgba(39, 199, 255, 0.08);
+        }
+
+.atlas-entry-primary,
+.atlas-entry-secondary {
+    height: 42px;
+    border: 1px solid rgba(39, 199, 255, 0.46);
+    border-radius: 4px;
+    background: rgba(39, 199, 255, 0.07);
+    color: #27c7ff;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    cursor: pointer;
+}
+
+    .atlas-entry-primary:hover,
+    .atlas-entry-secondary:hover {
+        background: rgba(39, 199, 255, 0.13);
+    }
+
+.atlas-entry-switch {
+    justify-self: start;
+    border: 0;
+    padding: 2px 0;
+    background: transparent;
+    color: rgba(216, 225, 230, 0.40);
+    font-size: 8px;
+    letter-spacing: 0.10em;
+    cursor: pointer;
+}
+
+.atlas-entry-message {
+    margin-top: -6px;
+    color: rgba(255, 216, 74, 0.80);
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.atlas-entry-verify {
+    width: min(315px, 100%);
+    color: rgba(216, 225, 230, 0.54);
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.atlas-entry-verify-title {
+    margin-bottom: 12px;
+    color: #27c7ff;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+}
+
+.atlas-entry-verify
+.atlas-entry-secondary {
+    width: 100%;
+    margin-top: 16px;
+}
+
+/* -----------------------------------------
+   LOGIN = ONLY LOGIN + GLOBE
+
+   This is the correction for the Collections
+   tab and other dashboard chrome appearing on
+   the title screen.
+----------------------------------------- */
+
+.atlas--entry-checking
+.atlas-app-brand,
+.atlas--entry-login
+.atlas-app-brand,
+.atlas--entry-verify
+.atlas-app-brand,
+.atlas--entry-checking
+.atlas-day-night-toggle,
+.atlas--entry-login
+.atlas-day-night-toggle,
+.atlas--entry-verify
+.atlas-day-night-toggle,
+.atlas--entry-checking
+.atlas-time-controls,
+.atlas--entry-login
+.atlas-time-controls,
+.atlas--entry-verify
+.atlas-time-controls,
+.atlas--entry-checking
+.atlas-drawer,
+.atlas--entry-login
+.atlas-drawer,
+.atlas--entry-verify
+.atlas-drawer,
+.atlas--entry-checking
+.atlas-panel-resizer,
+.atlas--entry-login
+.atlas-panel-resizer,
+.atlas--entry-verify
+.atlas-panel-resizer,
+.atlas--entry-checking
+.atlas-panel,
+.atlas--entry-login
+.atlas-panel,
+.atlas--entry-verify
+.atlas-panel,
+.atlas--entry-checking
+.atlas-guide-panel,
+.atlas--entry-login
+.atlas-guide-panel,
+.atlas--entry-verify
+.atlas-guide-panel {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* No scenic imagery or star field on login. */
+.atlas--entry-checking
+.atlas-scene-backdrop,
+.atlas--entry-login
+.atlas-scene-backdrop,
+.atlas--entry-verify
+.atlas-scene-backdrop,
+.atlas--entry-entering
+.atlas-scene-backdrop {
+    opacity: 0 !important;
+}
+
+.atlas--entry-checking
+.atlas-viewport::before,
+.atlas--entry-login
+.atlas-viewport::before,
+.atlas--entry-verify
+.atlas-viewport::before,
+.atlas--entry-entering
+.atlas-viewport::before {
+    opacity: 0 !important;
+    animation: none !important;
+}
+
+/* -----------------------------------------
+   ENTRY TRANSITION
+
+   Login card exits left.
+   The separate application brand enters
+   from the right. The rest simply resolves.
+----------------------------------------- */
+
+.atlas-app-brand {
+    transition: opacity 520ms ease, transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.atlas--entry-entering
+.atlas-app-brand {
+    opacity: 0;
+    transform: translateX(80px);
+}
+
+.atlas--entry-ready
+.atlas-app-brand {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/*
+  During the pullback, keep the remaining app
+  chrome hidden. It appears only when the globe
+  has nearly reached the working Atlas frame.
+*/
+
+.atlas--entry-entering
+.atlas-day-night-toggle,
+.atlas--entry-entering
+.atlas-time-controls,
+.atlas--entry-entering
+.atlas-drawer,
+.atlas--entry-entering
+.atlas-panel-resizer,
+.atlas--entry-entering
+.atlas-panel,
+.atlas--entry-entering
+.atlas-guide-panel {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Markers should not leak into the title shot. */
+.atlas--entry-checking
+.atlas-marker,
+.atlas--entry-login
+.atlas-marker,
+.atlas--entry-verify
+.atlas-marker,
+.atlas--entry-entering
+.atlas-marker {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Login globe is visual only. */
+.atlas--entry-checking
+.atlas-viewport,
+.atlas--entry-login
+.atlas-viewport,
+.atlas--entry-verify
+.atlas-viewport,
+.atlas--entry-entering
+.atlas-viewport {
+    pointer-events: none;
+}
+
+@media (max-width: 760px) {
+    .atlas-entry-card {
+        left: 28px;
+        right: 28px;
+        top: auto;
+        bottom: 42px;
+        width: auto;
+        transform: none;
+    }
+
+    .atlas--entry-entering
+    .atlas-entry-card {
+        transform: translateX(-90px);
+    }
 }
