@@ -4,6 +4,7 @@ import {
     useEffect,
     useRef,
     useState,
+    type ClipboardEvent,
     type DragEvent,
 } from "react";
 
@@ -4781,13 +4782,20 @@ export default function AtlasPanel({
 
     /* =========================================
        UPLOAD MEDIA
+
+       One upload engine for browse/drop and
+       clipboard screenshots. Clipboard uploads
+       can inherit the open Folder.
     ========================================= */
 
-    const handleUploadMedia =
-        async () => {
+    const uploadMediaFile =
+        async (
+            file: File,
+            targetFolderId:
+                string | null = null
+        ) => {
             if (
                 !selectedPin ||
-                !selectedFile ||
                 isUploading
             ) {
                 return;
@@ -4803,13 +4811,8 @@ export default function AtlasPanel({
                 return;
             }
 
-            setIsUploading(
-                true
-            );
-
-            setMediaError(
-                ""
-            );
+            setIsUploading(true);
+            setMediaError("");
 
             try {
                 const formData =
@@ -4817,7 +4820,7 @@ export default function AtlasPanel({
 
                 formData.append(
                     "file",
-                    selectedFile
+                    file
                 );
 
                 formData.append(
@@ -4829,60 +4832,64 @@ export default function AtlasPanel({
                     await fetch(
                         "/api/media/upload",
                         {
-                            method:
-                                "POST",
-
-                            body:
-                                formData,
+                            method: "POST",
+                            body: formData,
                         }
                     );
 
                 const result =
                     await response.json();
 
-                if (
-                    !response.ok
-                ) {
+                if (!response.ok) {
                     setMediaError(
                         result.error ??
                         "Upload failed."
                     );
-
                     return;
                 }
 
                 let uploaded:
                     AtlasMedia = {
                     ...result.media,
-
                     moment_id:
                         result.media
                             .moment_id ??
                         null,
-
+                    folder_id:
+                        result.media
+                            .folder_id ??
+                        null,
                     url:
                         result.media.url,
                 };
 
                 if (
-                    creationMomentId
+                    creationMomentId ||
+                    targetFolderId
                 ) {
                     const attachResponse =
                         await fetch(
                             `/api/media/${uploaded.id}`,
                             {
-                                method:
-                                    "PATCH",
-
+                                method: "PATCH",
                                 headers: {
                                     "Content-Type":
                                         "application/json",
                                 },
-
                                 body:
                                     JSON.stringify({
-                                        momentId:
-                                            creationMomentId,
+                                        ...(creationMomentId
+                                            ? {
+                                                momentId:
+                                                    creationMomentId,
+                                            }
+                                            : {}),
+                                        ...(targetFolderId
+                                            ? {
+                                                folderId:
+                                                    targetFolderId,
+                                            }
+                                            : {}),
                                     }),
                             }
                         );
@@ -4895,24 +4902,25 @@ export default function AtlasPanel({
                     ) {
                         setMediaError(
                             attachResult.error ??
-                            "Upload succeeded, but Atlas could not attach it to this Moment."
+                            "Upload succeeded, but Atlas could not place it in the current Content context."
                         );
-
-                        return;
+                    } else {
+                        uploaded = {
+                            ...uploaded,
+                            moment_id:
+                                attachResult.media
+                                    .moment_id ??
+                                uploaded.moment_id,
+                            folder_id:
+                                attachResult.media
+                                    .folder_id ??
+                                uploaded.folder_id,
+                            updated_at:
+                                attachResult.media
+                                    .updated_at ??
+                                uploaded.updated_at,
+                        };
                     }
-
-                    uploaded = {
-                        ...uploaded,
-                        moment_id:
-                            attachResult.media
-                                .moment_id,
-                        folder_id:
-                            attachResult.media
-                                .folder_id,
-                        updated_at:
-                            attachResult.media
-                                .updated_at,
-                    };
                 }
 
                 setMedia(
@@ -4922,9 +4930,7 @@ export default function AtlasPanel({
                     ]
                 );
 
-                setSelectedFile(
-                    null
-                );
+                setSelectedFile(null);
 
                 if (
                     fileInputRef.current
@@ -4942,11 +4948,153 @@ export default function AtlasPanel({
                     "Unexpected upload error."
                 );
             } finally {
-                setIsUploading(
-                    false
-                );
+                setIsUploading(false);
             }
         };
+
+    const handleUploadMedia =
+        async () => {
+            if (!selectedFile) {
+                return;
+            }
+
+            await uploadMediaFile(
+                selectedFile
+            );
+        };
+
+
+    /* =========================================
+       CLIPBOARD IMAGE CAPTURE
+
+       Win + Shift + S → Ctrl + V
+       Copy image → Ctrl/Cmd + V
+
+       Scoped to the Content panel only.
+    ========================================= */
+
+    const handleContentPaste =
+        (
+            event:
+                ClipboardEvent<HTMLElement>
+        ) => {
+            if (
+                !selectedPin ||
+                activePinTab !==
+                "content" ||
+                isUploading
+            ) {
+                return;
+            }
+
+            const clipboardItems =
+                Array.from(
+                    event.clipboardData
+                        ?.items ??
+                    []
+                );
+
+            const imageItem =
+                clipboardItems.find(
+                    (item) =>
+                        item.kind ===
+                        "file" &&
+                        item.type.startsWith(
+                            "image/"
+                        )
+                );
+
+            if (!imageItem) {
+                return;
+            }
+
+            if (
+                isMultiMomentSelection
+            ) {
+                event.preventDefault();
+
+                setMediaError(
+                    "Select one Moment or ALL before pasting an image."
+                );
+
+                return;
+            }
+
+            const clipboardFile =
+                imageItem.getAsFile();
+
+            if (!clipboardFile) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const extension =
+                clipboardFile.type ===
+                    "image/jpeg"
+                    ? "jpg"
+                    : clipboardFile.type ===
+                        "image/webp"
+                        ? "webp"
+                        : "png";
+
+            const now =
+                new Date();
+
+            const timestamp =
+                [
+                    now.getFullYear(),
+                    String(
+                        now.getMonth() + 1
+                    ).padStart(2, "0"),
+                    String(
+                        now.getDate()
+                    ).padStart(2, "0"),
+                ].join("-") +
+                "_" +
+                [
+                    String(
+                        now.getHours()
+                    ).padStart(2, "0"),
+                    String(
+                        now.getMinutes()
+                    ).padStart(2, "0"),
+                    String(
+                        now.getSeconds()
+                    ).padStart(2, "0"),
+                ].join("-");
+
+            const shouldRename =
+                !clipboardFile.name ||
+                clipboardFile.name ===
+                "image.png" ||
+                clipboardFile.name ===
+                "image.jpeg" ||
+                clipboardFile.name ===
+                "image.jpg";
+
+            const pastedFile =
+                shouldRename
+                    ? new File(
+                        [clipboardFile],
+                        `Screenshot_${timestamp}.${extension}`,
+                        {
+                            type:
+                                clipboardFile.type ||
+                                "image/png",
+                            lastModified:
+                                Date.now(),
+                        }
+                    )
+                    : clipboardFile;
+
+            void uploadMediaFile(
+                pastedFile,
+                openFolderId
+            );
+        };
+
 
     /* =========================================
        RENAME MEDIA
@@ -8663,6 +8811,9 @@ export default function AtlasPanel({
                                 ? ""
                                 : "is-hidden"
                                 }`}
+                            onPaste={
+                                handleContentPaste
+                            }
                         >
                             <div className="atlas-content-heading-row">
                                 <div className="atlas-content-heading">
@@ -8748,7 +8899,7 @@ export default function AtlasPanel({
                                 </div>
 
                                 <div className="atlas-dropzone-subtitle">
-                                    files, images, video or links · click to browse
+                                    files, images, video or links · click to browse · paste screenshots
                                 </div>
                             </div>
 
