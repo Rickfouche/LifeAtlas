@@ -4480,3 +4480,174 @@ select {
         width: 80vw;
     }
 }
+
+
+/* =========================================
+   PASS 15 — MOBILE WORKSPACE REACH + CONTROL CLEARANCE
+   ---------------------------------------------------
+   DESKTOP REMAINS LOCKED.
+   Mobile-only corrections layered after PASS 14.
+
+   1. Right workspace becomes near-full-screen.
+   2. Collapse chevron remains reachable.
+   3. Touch devices do NOT use desktop tab hover expansion.
+   4. DAY / NIGHT moves below Future horizons.
+========================================= */
+
+@media (max-width: 768px) {
+
+    /* =====================================
+       RIGHT WORKSPACE — NEAR FULL SCREEN
+
+       Leave a narrow strip of globe visible so
+       the workspace still feels spatial and the
+       collapse handle remains obvious.
+    ====================================== */
+
+    .atlas-panel,
+    .atlas-guide-panel {
+        width: calc(100dvw - 48px) !important;
+        max-width: calc(100dvw - 48px) !important;
+        left: 48px;
+        right: 0;
+    }
+
+    /*
+      The resize rail follows the new mobile panel
+      edge instead of the desktop JS width.
+    */
+
+    .atlas-panel-resizer.is-open {
+        right: calc(100dvw - 48px) !important;
+    }
+
+        .atlas-panel-resizer.is-open
+        .atlas-panel-resizer-handle {
+            right: -20px;
+        }
+
+    /* =====================================
+       PIN WORKSPACE TABS
+
+       Desktop teaches labels by expanding on hover.
+       Mobile Safari can keep :hover "stuck" after a
+       tap, which makes the fourth / Tasks tab run
+       off-screen. On touch widths, keep all four
+       sigils fixed and simultaneously reachable.
+    ====================================== */
+
+    .atlas-pin-tabs {
+        width: 100%;
+        gap: 8px !important;
+        overflow: visible;
+    }
+
+        .atlas-pin-tabs
+        .atlas-pin-tab,
+        .atlas-pin-tabs
+        .atlas-pin-tab:hover,
+        .atlas-pin-tabs
+        .atlas-pin-tab:focus-visible {
+            flex: 0 0 52px;
+            width: 52px;
+            min-width: 52px;
+            max-width: 52px;
+            padding: 0 14px;
+            gap: 0;
+            justify-content: center;
+        }
+
+            .atlas-pin-tabs
+            .atlas-pin-tab-label,
+            .atlas-pin-tabs
+            .atlas-pin-tab:hover
+            .atlas-pin-tab-label,
+            .atlas-pin-tabs
+            .atlas-pin-tab:focus-visible
+            .atlas-pin-tab-label {
+                width: 0;
+                opacity: 0;
+                transform: translateX(-4px);
+            }
+
+    /*
+      Four 52px sigils + gaps = 232px.
+      This stays comfortably inside the near-full
+      workspace even on narrow phones.
+    */
+
+    /* =====================================
+       DAY / NIGHT CLEARANCE
+
+       Future's WEEK / MONTH / YEAR occupies the
+       space directly beneath the primary bar.
+       Move Day/Night below that entire zone.
+    ====================================== */
+
+    .atlas-day-night-toggle {
+        top: calc(env(safe-area-inset-top, 0px) + 106px);
+        right: 12px;
+    }
+
+    /*
+      Brand can share the same lower utility row
+      without competing with the Future submenu.
+    */
+
+    .atlas-app-brand {
+        top: calc(env(safe-area-inset-top, 0px) + 112px);
+    }
+
+    /* =====================================
+       GUIDE / PANEL SCROLL
+
+       Ensure content begins from its real top every
+       time the near-full mobile workspace opens.
+    ====================================== */
+
+    .atlas-guide-scroll,
+    .atlas-panel-scroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}
+
+@media (max-width: 430px) {
+
+    .atlas-panel,
+    .atlas-guide-panel {
+        width: calc(100dvw - 42px) !important;
+        max-width: calc(100dvw - 42px) !important;
+        left: 42px;
+    }
+
+    .atlas-panel-resizer.is-open {
+        right: calc(100dvw - 42px) !important;
+    }
+
+    .atlas-day-night-toggle {
+        top: calc(env(safe-area-inset-top, 0px) + 104px);
+        right: 8px;
+    }
+
+    .atlas-app-brand {
+        top: calc(env(safe-area-inset-top, 0px) + 110px);
+    }
+
+    .atlas-pin-tabs {
+        gap: 7px !important;
+    }
+
+        .atlas-pin-tabs
+        .atlas-pin-tab,
+        .atlas-pin-tabs
+        .atlas-pin-tab:hover,
+        .atlas-pin-tabs
+        .atlas-pin-tab:focus-visible {
+            flex-basis: 50px;
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+        }
+}
