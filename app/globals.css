@@ -4651,3 +4651,274 @@ select {
             max-width: 50px;
         }
 }
+
+
+/* =========================================
+   PASS 16 — MOBILE TOUCH + WORKSPACE POLISH
+   -----------------------------------------
+   DESKTOP LOCK:
+   All rules in this pass are mobile/touch only.
+
+   Mobile interaction model:
+   TAP PIN
+      → workspace snaps open
+      → globe becomes inert
+      → clear close / tap-outside
+      → globe becomes active again
+========================================= */
+
+/* Desktop never sees the mobile shield / close affordance. */
+
+.atlas-mobile-workspace-backdrop,
+.atlas-mobile-workspace-close {
+    display: none;
+}
+
+
+@media (max-width: 768px) {
+
+    /* =====================================
+       COLLECTIONS CLEARANCE
+
+       DAY / NIGHT now owns the utility row.
+       Collections begins underneath it with
+       deliberate breathing room.
+    ====================================== */
+
+    .atlas-drawer {
+        top: calc( env(safe-area-inset-top, 0px) + 154px );
+    }
+
+    .atlas-drawer-content {
+        max-height: calc( 100dvh - env(safe-area-inset-top, 0px) - 154px );
+    }
+
+
+    /* =====================================
+       PIN WORKSPACE — MOBILE SHELL
+
+       Preserve the right-side Atlas language,
+       but make it decisively mobile:
+       almost full-screen with only a narrow
+       spatial strip of world remaining.
+    ====================================== */
+
+    .atlas-panel,
+    .atlas-guide-panel {
+        left: 36px !important;
+        right: 0 !important;
+        width: calc( 100dvw - 36px ) !important;
+        max-width: calc( 100dvw - 36px ) !important;
+        animation: atlas-mobile-workspace-in 180ms cubic-bezier( 0.22, 1, 0.36, 1 ) both;
+    }
+
+    @keyframes atlas-mobile-workspace-in {
+        from {
+            opacity: 0.92;
+            transform: translateX(18px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+
+    /* =====================================
+       GLOBE INTERACTION SHIELD
+
+       z-index:
+       globe / nav       < 35
+       shield              35
+       panel               40
+       resize handle       46
+       explicit close      60
+    ====================================== */
+
+    .atlas-mobile-workspace-backdrop {
+        appearance: none;
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        background: rgba( 7, 9, 13, 0.04 );
+        cursor: pointer;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+        animation: atlas-mobile-shield-in 140ms ease both;
+    }
+
+    @keyframes atlas-mobile-shield-in {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+
+    /* =====================================
+       EXPLICIT MOBILE CLOSE
+
+       Lives in the narrow world strip rather
+       than over the Pin header / ellipsis menu.
+    ====================================== */
+
+    .atlas-mobile-workspace-close {
+        appearance: none;
+        display: grid;
+        place-items: center;
+        position: fixed;
+        top: calc( env(safe-area-inset-top, 0px) + 14px );
+        left: 4px;
+        z-index: 60;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid rgba( 39, 199, 255, 0.34 );
+        border-radius: 50%;
+        background: rgba( 7, 11, 16, 0.90 );
+        color: rgba( 141, 228, 255, 0.88 );
+        font-size: 18px;
+        font-weight: 300;
+        line-height: 1;
+        cursor: pointer;
+        touch-action: manipulation;
+        box-shadow: 0 0 12px rgba( 39, 199, 255, 0.12 );
+        -webkit-tap-highlight-color: transparent;
+    }
+
+
+    /* =====================================
+       MOBILE RESIZER = COLLAPSE BUTTON ONLY
+
+       Do not let the large invisible desktop
+       resize rail steal touch gestures.
+    ====================================== */
+
+    .atlas-panel-resizer.is-open {
+        right: calc( 100dvw - 36px ) !important;
+        pointer-events: none;
+        touch-action: none;
+    }
+
+        .atlas-panel-resizer.is-open
+        .atlas-panel-resizer-handle {
+            pointer-events: auto;
+            touch-action: manipulation;
+            right: -18px;
+            width: 36px;
+            height: 76px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .atlas-panel-resizer.is-open
+        .atlas-panel-resizer-chevron-group > span {
+            font-size: 42px;
+        }
+
+
+    /* =====================================
+       PINS = ONE TAP
+
+       Desktop keeps hover previews.
+       Phone removes the intermediate hover
+       presentation completely.
+    ====================================== */
+
+    .atlas-marker,
+    .atlas-marker:hover,
+    .atlas-marker:active {
+        transform: none;
+    }
+
+        .atlas-marker-label,
+        .atlas-marker:hover
+        .atlas-marker-label,
+        .atlas-marker:focus-visible
+        .atlas-marker-label {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: none !important;
+        }
+
+
+    /* =====================================
+       PANEL CONTENT
+
+       Keep the content fully reachable.
+       The fixed actions stay above Safari's
+       lower browser chrome / safe area.
+    ====================================== */
+
+    .atlas-panel-scroll,
+    .atlas-guide-scroll {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .atlas-panel-actions {
+        padding-bottom: calc( 18px + env( safe-area-inset-bottom, 0px ) );
+    }
+}
+
+
+@media (max-width: 430px) {
+
+    /*
+      Narrow iPhones get an even slimmer
+      world strip so Content / People / Tasks
+      have as much room as possible.
+    */
+
+    .atlas-panel,
+    .atlas-guide-panel {
+        left: 30px !important;
+        width: calc( 100dvw - 30px ) !important;
+        max-width: calc( 100dvw - 30px ) !important;
+    }
+
+    .atlas-panel-resizer.is-open {
+        right: calc( 100dvw - 30px ) !important;
+    }
+
+    .atlas-mobile-workspace-close {
+        left: 2px;
+        width: 26px;
+        height: 26px;
+        font-size: 17px;
+    }
+
+    .atlas-drawer {
+        top: calc( env(safe-area-inset-top, 0px) + 150px );
+    }
+
+    .atlas-drawer-content {
+        max-height: calc( 100dvh - env(safe-area-inset-top, 0px) - 150px );
+    }
+}
+
+
+/*
+  Coarse-pointer safeguard for larger touch
+  devices that may sit above the phone width.
+  The only behavior changed here is hover UI.
+*/
+@media (hover: none), (pointer: coarse) {
+
+    .atlas-marker:hover {
+        transform: none;
+    }
+
+    .atlas-marker-label {
+        display: none !important;
+    }
+}

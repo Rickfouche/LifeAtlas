@@ -1635,6 +1635,54 @@ export default function AtlasApp({
             );
         };
 
+    /*
+      Mobile uses a decisive full close:
+      clear the pin context AND collapse the
+      workspace so the globe immediately becomes
+      the active surface again.
+
+      Desktop continues using handleClosePanel()
+      exactly as before.
+    */
+    const handleMobileCloseWorkspace =
+        () => {
+            if (
+                workspaceAnimationRef.current !==
+                null
+            ) {
+                cancelAnimationFrame(
+                    workspaceAnimationRef.current
+                );
+
+                workspaceAnimationRef.current =
+                    null;
+            }
+
+            setDraftPin(
+                null
+            );
+
+            setRepositionPinPosition(
+                null
+            );
+
+            setSelectedPin(
+                null
+            );
+
+            setPanelWidth(
+                0
+            );
+
+            setIsWorkspaceOpen(
+                false
+            );
+
+            setIsPanelResizing(
+                false
+            );
+        };
+
     /* =========================================
        CREATE COLLECTION
     ========================================= */
@@ -3411,6 +3459,41 @@ export default function AtlasApp({
                 }
             />
 
+            {/* MOBILE PIN WORKSPACE SHIELD
+
+                On phone, when a Pin workspace is open,
+                the world underneath stops receiving
+                drag / zoom / tap input.
+
+                The visible world strip also becomes a
+                deliberate tap-outside close target.
+            */}
+
+            {isWorkspaceOpen &&
+                hasPinWorkspace && (
+                    <>
+                        <button
+                            type="button"
+                            className="atlas-mobile-workspace-backdrop"
+                            onClick={
+                                handleMobileCloseWorkspace
+                            }
+                            aria-label="Close pin workspace"
+                        />
+
+                        <button
+                            type="button"
+                            className="atlas-mobile-workspace-close"
+                            onClick={
+                                handleMobileCloseWorkspace
+                            }
+                            aria-label="Close pin workspace"
+                        >
+                            ×
+                        </button>
+                    </>
+                )}
+
             {/* WORKSPACE RESIZE RAIL */}
 
             <div
@@ -3459,6 +3542,27 @@ export default function AtlasApp({
                         event
                     ) => {
                         event.stopPropagation();
+
+                        /*
+                          Touch / phone:
+                          this is a button, not a resize grip.
+                          Let the click toggle the workspace
+                          without putting Atlas into resize mode.
+                        */
+                        const isMobileTouch =
+                            window.matchMedia(
+                                "(max-width: 768px), (pointer: coarse)"
+                            ).matches;
+
+                        if (
+                            isMobileTouch
+                        ) {
+                            resizeDidMoveRef.current =
+                                false;
+
+                            return;
+                        }
+
                         event.preventDefault();
 
                         resizeDidMoveRef.current =
