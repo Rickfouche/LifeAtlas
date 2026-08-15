@@ -4183,3 +4183,300 @@ select {
         transform: translateX(-90px);
     }
 }
+
+
+/* =========================================
+   PASS 14 — MOBILE FRAMING ONLY
+   -----------------------------------------
+   DESKTOP LOCK:
+   Everything above this block is untouched.
+   These rules apply only at <= 768px.
+
+   Goals:
+   - compact / lower PPFA + ADD bar
+   - compact visible DAY / NIGHT
+   - preserve scene PNG proportions
+   - keep drawers/panels usable in Safari
+   - no new horizontal navigation mechanic
+========================================= */
+
+@media (max-width: 768px) {
+
+    /* =====================================
+       MOBILE VIEWPORT
+    ====================================== */
+
+    .atlas {
+        width: 100dvw;
+        height: 100dvh;
+        min-height: 100dvh;
+    }
+
+    .atlas-viewport {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* =====================================
+       PRIMARY TIME BAR
+
+       Keep the same five-part interaction,
+       just scale it to the phone rather than
+       allowing the desktop 700px bar to spill.
+    ====================================== */
+
+    .atlas-time-controls.atlas-time-controls--horizontal {
+        top: calc(env(safe-area-inset-top, 0px) + 18px);
+        left: 12px;
+        right: 12px;
+        width: auto;
+        max-width: none;
+        min-height: 44px;
+        transform: none;
+        border-radius: 7px;
+    }
+
+    .atlas-time-controls--horizontal > button {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        height: 44px;
+        min-height: 44px;
+        padding: 0 5px;
+        font-size: 9px;
+        letter-spacing: 0.045em;
+        white-space: nowrap;
+    }
+
+    /* FUTURE must occupy one equal mobile cell. */
+
+    .atlas-time-controls--horizontal
+    .atlas-future-parent {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        height: 44px;
+        min-height: 44px;
+    }
+
+        .atlas-time-controls--horizontal
+        .atlas-future-parent.is-open {
+            height: 44px;
+            min-height: 44px;
+        }
+
+    .atlas-time-controls--horizontal
+    .atlas-future-parent-row {
+        height: 44px;
+        min-height: 44px;
+    }
+
+        .atlas-time-controls--horizontal
+        .atlas-future-parent-row > button:first-child {
+            height: 44px;
+            font-size: 9px;
+            letter-spacing: 0.045em;
+        }
+
+    .atlas-time-controls--horizontal
+    .atlas-future-arrow {
+        width: 12px;
+        min-width: 12px !important;
+        height: 44px;
+        font-size: 8px;
+    }
+
+    /*
+      The parent bar itself still grows.
+      On mobile it grows less so it remains
+      comfortably clear of the globe.
+    */
+
+    .atlas-time-controls.atlas-time-controls--horizontal.is-future-menu-open {
+        padding-bottom: 30px;
+    }
+
+    .atlas-time-controls--horizontal
+    .atlas-future-parent
+    .atlas-present-lens {
+        top: 44px !important;
+        width: min(190px, 70vw);
+        height: 28px;
+        min-height: 28px;
+        gap: 15px;
+    }
+
+        .atlas-time-controls--horizontal
+        .atlas-future-parent
+        .atlas-present-lens button {
+            height: 28px;
+            font-size: 7px;
+        }
+
+    /* =====================================
+       DAY / NIGHT
+
+       Secondary control, so make it small
+       but keep it unmistakably available.
+    ====================================== */
+
+    .atlas-day-night-toggle {
+        top: calc(env(safe-area-inset-top, 0px) + 70px);
+        right: 12px;
+        border-radius: 6px;
+    }
+
+        .atlas-day-night-toggle button {
+            min-width: 48px;
+            height: 30px;
+            padding: 0 8px;
+            font-size: 8px;
+            letter-spacing: 0.08em;
+        }
+
+    /* =====================================
+       APPLICATION BRAND
+
+       Keep it out of the mobile control bar.
+    ====================================== */
+
+    .atlas-app-brand {
+        top: calc(env(safe-area-inset-top, 0px) + 76px);
+        left: 14px;
+        font-size: 8px;
+        letter-spacing: 0.28em;
+        opacity: 0.58;
+    }
+
+    /* =====================================
+       COLLECTIONS DRAWER
+
+       Existing interaction already works.
+       Only clamp it to a predictable phone
+       width and drop it below top controls.
+    ====================================== */
+
+    .atlas-drawer {
+        top: calc(env(safe-area-inset-top, 0px) + 112px);
+        width: min(78vw, 320px);
+        transform: translateX(-100%);
+    }
+
+        .atlas-drawer.is-open {
+            transform: translateX(0);
+        }
+
+    .atlas-drawer-tab {
+        width: 46px;
+        height: 58px;
+    }
+
+    .atlas-drawer-content {
+        max-height: calc( 100dvh - env(safe-area-inset-top, 0px) - 112px );
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* =====================================
+       RIGHT WORKSPACE
+
+       Keep it a panel, not a new mobile page.
+       Use dynamic viewport height and ensure
+       the scroll area always begins at top.
+    ====================================== */
+
+    .atlas-panel,
+    .atlas-guide-panel {
+        top: 0;
+        bottom: auto;
+        height: 100dvh;
+        max-height: 100dvh;
+    }
+
+    .atlas-panel-scroll {
+        top: 0;
+        bottom: 74px;
+        padding: calc(env(safe-area-inset-top, 0px) + 24px) 22px 44px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .atlas-panel-actions {
+        padding-bottom: calc( 16px + env(safe-area-inset-bottom, 0px) );
+    }
+
+    /*
+      Pull handle stays vertically visible even
+      when Safari changes its browser chrome.
+    */
+
+    .atlas-panel-resizer-handle {
+        position: fixed;
+        top: 50dvh;
+    }
+
+    /* =====================================
+       SCENE ARTWORK
+
+       Do NOT stretch the PNG to phone width.
+       Preserve its original proportions and
+       let excess width crop off-screen.
+    ====================================== */
+
+    .atlas-scene-backdrop--present-night,
+    .atlas-scene-backdrop--present-day,
+    .atlas-scene-backdrop--past-night,
+    .atlas-scene-backdrop--past-day,
+    .atlas-scene-backdrop--future-night,
+    .atlas-scene-backdrop--future-day {
+        background-size: auto clamp(118px, 18dvh, 170px), auto, auto;
+        background-position: bottom center, center, center;
+    }
+
+    /* =====================================
+       LOGIN
+
+       Keep the cinematic card readable without
+       touching the desktop login composition.
+    ====================================== */
+
+    .atlas-entry-card {
+        left: 26px;
+        right: 26px;
+        bottom: calc( 34px + env(safe-area-inset-bottom, 0px) );
+    }
+}
+
+
+/* =========================================
+   EXTRA NARROW PHONE TUNING
+========================================= */
+
+@media (max-width: 430px) {
+
+    .atlas-time-controls.atlas-time-controls--horizontal {
+        left: 8px;
+        right: 8px;
+    }
+
+    .atlas-time-controls--horizontal > button,
+    .atlas-time-controls--horizontal
+    .atlas-future-parent-row > button:first-child {
+        font-size: 8px;
+    }
+
+    .atlas-day-night-toggle {
+        right: 8px;
+    }
+
+        .atlas-day-night-toggle button {
+            min-width: 43px;
+            padding: 0 6px;
+            font-size: 7px;
+        }
+
+    .atlas-drawer {
+        width: 80vw;
+    }
+}
