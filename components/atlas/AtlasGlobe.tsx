@@ -10,6 +10,7 @@ import {
     Marker,
     setWorkerUrl,
     type MapMouseEvent,
+    type GeoJSONSource,
 } from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -171,6 +172,31 @@ const ALL_GLOBE = {
 } as const;
 
 /* =========================================
+   DETAIL VIEW
+
+   Life Atlas remains the information layer.
+   OpenFreeMap only supplies physical city
+   structure at close zoom:
+   - land use / parks
+   - roads
+   - building footprints
+   - NO labels / POIs / businesses
+
+   The same threshold also disables idle
+   planetary rotation.
+========================================= */
+
+const DETAIL_VIEW_ZOOM = 7;
+
+const DETAIL_BUILDING_ZOOM = 12;
+
+const DETAIL_MAX_ZOOM = 16;
+
+const PIN_CLUSTER_MAX_ZOOM = 11;
+
+const PIN_CLUSTER_RADIUS = 58;
+
+/* =========================================
    PROPS
 ========================================= */
 
@@ -309,6 +335,34 @@ export default function AtlasGlobe({
         useRef(0);
 
     /* =========================================
+       DETAIL / CLUSTER LIVE REFERENCES
+
+       Cluster layer event handlers are attached
+       once when MapLibre loads. These refs keep
+       them connected to the latest React props.
+    ========================================= */
+
+    const pinsByIdRef =
+        useRef<
+            globalThis.Map<string, AtlasPin>
+        >(
+            new globalThis.Map()
+        );
+
+    const onSelectPinRef =
+        useRef(
+            onSelectPin
+        );
+
+    useEffect(() => {
+        onSelectPinRef.current =
+            onSelectPin;
+    }, [
+        onSelectPin,
+    ]);
+
+
+    /* =========================================
        CREATE MAP
     ========================================= */
 
@@ -332,6 +386,14 @@ export default function AtlasGlobe({
                 version: 8,
 
                 sources: {},
+
+                /*
+                  Needed only for the numeric cluster
+                  count symbol. No geographic labels
+                  are loaded into Life Atlas.
+                */
+                glyphs:
+                    "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
 
                 /*
                   CYBERPUNK ATMOSPHERE
@@ -406,7 +468,7 @@ export default function AtlasGlobe({
 
             minZoom: 0.8,
 
-            maxZoom: 8,
+            maxZoom: DETAIL_MAX_ZOOM,
 
             attributionControl:
                 false,
@@ -437,6 +499,493 @@ export default function AtlasGlobe({
                         data:
                             "/data/world-countries.geojson",
                     }
+                );
+
+                /* -------------------------------------
+                   DETAIL CITY STRUCTURE
+
+                   OpenFreeMap / OpenMapTiles geometry.
+                   We intentionally do NOT load a full
+                   provider style because Life Atlas owns
+                   the visual language.
+
+                   No symbol layers are added, therefore
+                   there are no street names, POIs,
+                   businesses, transit labels, etc.
+                ------------------------------------- */
+
+                map.addSource(
+                    "atlas-detail-map",
+                    {
+                        type: "vector",
+
+                        url:
+                            "https://tiles.openfreemap.org/planet",
+                    }
+                );
+
+                map.addLayer({
+                    id:
+                        "atlas-detail-landuse",
+
+                    type:
+                        "fill",
+
+                    source:
+                        "atlas-detail-map",
+
+                    "source-layer":
+                        "landuse",
+
+                    minzoom:
+                        DETAIL_VIEW_ZOOM,
+
+                    paint: {
+                        "fill-color":
+                            "#10241d",
+
+                        "fill-opacity": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            DETAIL_VIEW_ZOOM,
+                            0,
+                            9,
+                            0.16,
+                            13,
+                            0.28,
+                        ],
+                    },
+                });
+
+                map.addLayer({
+                    id:
+                        "atlas-detail-roads",
+
+                    type:
+                        "line",
+
+                    source:
+                        "atlas-detail-map",
+
+                    "source-layer":
+                        "transportation",
+
+                    minzoom:
+                        DETAIL_VIEW_ZOOM,
+
+                    paint: {
+                        "line-color":
+                            "#7893a0",
+
+                        "line-width": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            DETAIL_VIEW_ZOOM,
+                            0.25,
+                            10,
+                            0.55,
+                            13,
+                            1.05,
+                            16,
+                            1.8,
+                        ],
+
+                        "line-opacity": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            DETAIL_VIEW_ZOOM,
+                            0,
+                            8,
+                            0.18,
+                            11,
+                            0.34,
+                            16,
+                            0.48,
+                        ],
+                    },
+                });
+
+                map.addLayer({
+                    id:
+                        "atlas-detail-buildings",
+
+                    type:
+                        "fill",
+
+                    source:
+                        "atlas-detail-map",
+
+                    "source-layer":
+                        "building",
+
+                    minzoom:
+                        DETAIL_BUILDING_ZOOM,
+
+                    paint: {
+                        "fill-color":
+                            "#17232b",
+
+                        "fill-outline-color":
+                            "#3b5968",
+
+                        "fill-opacity": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            DETAIL_BUILDING_ZOOM,
+                            0,
+                            13,
+                            0.34,
+                            16,
+                            0.58,
+                        ],
+                    },
+                });
+
+                /* -------------------------------------
+                   PIN CLUSTER SOURCE
+
+                   The existing DOM Pin markers remain
+                   the final close-range representation.
+                   This GeoJSON source gives Atlas a
+                   zoom-aware navigation layer before
+                   those Pins fully separate.
+                ------------------------------------- */
+
+                map.addSource(
+                    "atlas-pin-clusters",
+                    {
+                        type: "geojson",
+
+                        data: {
+                            type:
+                                "FeatureCollection",
+
+                            features: [],
+                        },
+
+                        cluster:
+                            true,
+
+                        clusterRadius:
+                            PIN_CLUSTER_RADIUS,
+
+                        clusterMaxZoom:
+                            PIN_CLUSTER_MAX_ZOOM,
+                    }
+                );
+
+                map.addLayer({
+                    id:
+                        "atlas-pin-cluster-glow",
+
+                    type:
+                        "circle",
+
+                    source:
+                        "atlas-pin-clusters",
+
+                    filter: [
+                        "has",
+                        "point_count",
+                    ],
+
+                    paint: {
+                        "circle-radius": [
+                            "step",
+                            [
+                                "get",
+                                "point_count",
+                            ],
+                            18,
+                            6,
+                            22,
+                            15,
+                            27,
+                        ],
+
+                        "circle-color":
+                            "rgba(7, 9, 13, 0.90)",
+
+                        "circle-stroke-color":
+                            "#27c7ff",
+
+                        "circle-stroke-width":
+                            1.4,
+
+                        "circle-opacity":
+                            0.96,
+
+                        "circle-stroke-opacity":
+                            0.88,
+                    },
+                });
+
+                map.addLayer({
+                    id:
+                        "atlas-pin-cluster-count",
+
+                    type:
+                        "symbol",
+
+                    source:
+                        "atlas-pin-clusters",
+
+                    filter: [
+                        "has",
+                        "point_count",
+                    ],
+
+                    layout: {
+                        "text-field":
+                            "{point_count_abbreviated}",
+
+                        "text-size":
+                            11,
+
+                        "text-font": [
+                            "Open Sans Regular",
+                        ],
+
+                        "text-allow-overlap":
+                            true,
+                    },
+
+                    paint: {
+                        "text-color":
+                            "#8de4ff",
+
+                        "text-halo-color":
+                            "#07090d",
+
+                        "text-halo-width":
+                            1,
+                    },
+                });
+
+                map.addLayer({
+                    id:
+                        "atlas-pin-unclustered",
+
+                    type:
+                        "circle",
+
+                    source:
+                        "atlas-pin-clusters",
+
+                    filter: [
+                        "!",
+                        [
+                            "has",
+                            "point_count",
+                        ],
+                    ],
+
+                    maxzoom:
+                        PIN_CLUSTER_MAX_ZOOM + 1,
+
+                    paint: {
+                        "circle-radius":
+                            5,
+
+                        "circle-color":
+                            "#07090d",
+
+                        "circle-stroke-color":
+                            "#27c7ff",
+
+                        "circle-stroke-width":
+                            1.2,
+
+                        "circle-opacity":
+                            0.96,
+                    },
+                });
+
+                const handleClusterClick =
+                    async (
+                        event:
+                            MapMouseEvent
+                    ) => {
+                        const feature =
+                            map.queryRenderedFeatures(
+                                event.point,
+                                {
+                                    layers: [
+                                        "atlas-pin-cluster-glow",
+                                    ],
+                                }
+                            )[0];
+
+                        if (!feature) {
+                            return;
+                        }
+
+                        const clusterId =
+                            Number(
+                                feature.properties
+                                    ?.cluster_id
+                            );
+
+                        const coordinates =
+                            feature.geometry.type ===
+                                "Point"
+                                ? feature.geometry.coordinates
+                                : null;
+
+                        if (
+                            !Number.isFinite(
+                                clusterId
+                            ) ||
+                            !coordinates
+                        ) {
+                            return;
+                        }
+
+                        const source =
+                            map.getSource(
+                                "atlas-pin-clusters"
+                            ) as
+                            | GeoJSONSource
+                            | undefined;
+
+                        if (!source) {
+                            return;
+                        }
+
+                        const expansionZoom =
+                            await source.getClusterExpansionZoom(
+                                clusterId
+                            );
+
+                        lastInteractionRef.current =
+                            Date.now();
+
+                        idleSpinSpeedRef.current =
+                            0;
+
+                        map.easeTo({
+                            center: [
+                                coordinates[0],
+                                coordinates[1],
+                            ],
+
+                            zoom:
+                                Math.min(
+                                    DETAIL_MAX_ZOOM,
+                                    Math.max(
+                                        expansionZoom,
+                                        map.getZoom() +
+                                        1
+                                    )
+                                ),
+
+                            duration:
+                                720,
+
+                            essential:
+                                true,
+                        });
+                    };
+
+                const handleUnclusteredPinClick =
+                    (
+                        event:
+                            MapMouseEvent
+                    ) => {
+                        const feature =
+                            map.queryRenderedFeatures(
+                                event.point,
+                                {
+                                    layers: [
+                                        "atlas-pin-unclustered",
+                                    ],
+                                }
+                            )[0];
+
+                        const pinId =
+                            feature?.properties
+                                ?.pin_id;
+
+                        if (
+                            typeof pinId !==
+                            "string"
+                        ) {
+                            return;
+                        }
+
+                        const pin =
+                            pinsByIdRef.current.get(
+                                pinId
+                            );
+
+                        if (!pin) {
+                            return;
+                        }
+
+                        onSelectPinRef.current(
+                            pin
+                        );
+                    };
+
+                map.on(
+                    "click",
+                    "atlas-pin-cluster-glow",
+                    handleClusterClick
+                );
+
+                map.on(
+                    "click",
+                    "atlas-pin-cluster-count",
+                    handleClusterClick
+                );
+
+                map.on(
+                    "click",
+                    "atlas-pin-unclustered",
+                    handleUnclusteredPinClick
+                );
+
+                const showPointer =
+                    () => {
+                        map.getCanvas().style.cursor =
+                            "pointer";
+                    };
+
+                const restorePointer =
+                    () => {
+                        map.getCanvas().style.cursor =
+                            isAddingPin ||
+                                isRepositioningPin
+                                ? "crosshair"
+                                : "grab";
+                    };
+
+                map.on(
+                    "mouseenter",
+                    "atlas-pin-cluster-glow",
+                    showPointer
+                );
+
+                map.on(
+                    "mouseenter",
+                    "atlas-pin-unclustered",
+                    showPointer
+                );
+
+                map.on(
+                    "mouseleave",
+                    "atlas-pin-cluster-glow",
+                    restorePointer
+                );
+
+                map.on(
+                    "mouseleave",
+                    "atlas-pin-unclustered",
+                    restorePointer
                 );
 
                 const initialStyle =
@@ -912,6 +1461,29 @@ export default function AtlasGlobe({
 
                     return;
                 }
+
+                /*
+                  DETAIL VIEW is intentionally stable.
+                  Once Atlas becomes a city / neighborhood
+                  planning surface, the planet no longer
+                  rotates underneath the user.
+                */
+
+                if (
+                    map.getZoom() >=
+                    DETAIL_VIEW_ZOOM
+                ) {
+                    idleSpinSpeedRef.current =
+                        0;
+
+                    idleSpinFrameRef.current =
+                        requestAnimationFrame(
+                            animate
+                        );
+
+                    return;
+                }
+
 
                 if (
                     isUserInteractingRef.current
@@ -1660,6 +2232,116 @@ export default function AtlasGlobe({
     ]);
 
     /* =========================================
+       CLUSTER DATA
+
+       React remains the source of truth for Pins.
+       MapLibre receives only the geographic subset
+       needed for cluster navigation.
+    ========================================= */
+
+    useEffect(() => {
+        pinsByIdRef.current =
+            new globalThis.Map(
+                pins.map(
+                    (pin) => [
+                        pin.id,
+                        pin,
+                    ]
+                )
+            );
+
+        const map =
+            mapRef.current;
+
+        if (!map) {
+            return;
+        }
+
+        const syncPins =
+            () => {
+                const source =
+                    map.getSource(
+                        "atlas-pin-clusters"
+                    ) as
+                    | GeoJSONSource
+                    | undefined;
+
+                if (!source) {
+                    return;
+                }
+
+                source.setData({
+                    type:
+                        "FeatureCollection",
+
+                    features:
+                        pins
+                            .filter(
+                                (pin) =>
+                                    !(
+                                        isRepositioningPin &&
+                                        pin.id ===
+                                        repositioningPinId
+                                    )
+                            )
+                            .map(
+                                (pin) => ({
+                                    type:
+                                        "Feature",
+
+                                    properties: {
+                                        pin_id:
+                                            pin.id,
+                                    },
+
+                                    geometry: {
+                                        type:
+                                            "Point",
+
+                                        coordinates: [
+                                            pin.longitude,
+                                            pin.latitude,
+                                        ],
+                                    },
+                                })
+                            ),
+                });
+            };
+
+        if (
+            map.isStyleLoaded()
+        ) {
+            syncPins();
+            return;
+        }
+
+        map.once(
+            "load",
+            syncPins
+        );
+
+        return () => {
+            map.off(
+                "load",
+                syncPins
+            );
+        };
+    }, [
+        pins,
+        isRepositioningPin,
+        repositioningPinId,
+    ]);
+
+    /* =========================================
+       DOM PIN VISIBILITY
+
+       Below the final cluster zoom, MapLibre owns
+       the navigation representation. At close
+       range, the original Life Atlas DOM Pins
+       return unchanged.
+    ========================================= */
+
+    /* =========================================
        SAVED MARKERS
     ========================================= */
 
@@ -1847,6 +2529,39 @@ export default function AtlasGlobe({
                 marker
             );
         });
+
+        const syncDomPinVisibility =
+            () => {
+                const showDomPins =
+                    map.getZoom() >
+                    PIN_CLUSTER_MAX_ZOOM;
+
+                savedMarkersRef.current.forEach(
+                    (marker) => {
+                        marker
+                            .getElement()
+                            .style
+                            .display =
+                            showDomPins
+                                ? ""
+                                : "none";
+                    }
+                );
+            };
+
+        syncDomPinVisibility();
+
+        map.on(
+            "zoom",
+            syncDomPinVisibility
+        );
+
+        return () => {
+            map.off(
+                "zoom",
+                syncDomPinVisibility
+            );
+        };
     }, [
         pins,
         onSelectPin,
