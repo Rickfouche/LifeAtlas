@@ -11,6 +11,7 @@ import {
     setWorkerUrl,
     type MapMouseEvent,
     type GeoJSONSource,
+    type ExpressionSpecification,
 } from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -210,7 +211,7 @@ const PIN_CLUSTER_RADIUS = 58;
 
 function worldOverlayOpacity(
     baseOpacity: number
-) {
+): ExpressionSpecification {
     return [
         "interpolate",
         ["linear"],
@@ -219,12 +220,12 @@ function worldOverlayOpacity(
         baseOpacity,
         8.25,
         0,
-    ] as const;
+    ];
 }
 
 function detailRoadOpacity(
     sceneMode: "day" | "night"
-) {
+): ExpressionSpecification {
     return [
         "interpolate",
         ["linear"],
@@ -243,7 +244,7 @@ function detailRoadOpacity(
         sceneMode === "day"
             ? 0.68
             : 0.48,
-    ] as const;
+    ];
 }
 
 /* =========================================
