@@ -197,6 +197,56 @@ const PIN_CLUSTER_MAX_ZOOM = 11;
 const PIN_CLUSTER_RADIUS = 58;
 
 /* =========================================
+   ZOOM-DEPENDENT WORLD OVERLAY
+
+   The coarse countries GeoJSON is perfect for the
+   planetary Atlas, but it should gracefully hand off
+   to the detailed OpenFreeMap geometry at city scale.
+
+   0–6.25: full authored globe
+   6.25–8.25: smooth fade
+   8.25+: physical detail map owns geography
+========================================= */
+
+function worldOverlayOpacity(
+    baseOpacity: number
+) {
+    return [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        6.25,
+        baseOpacity,
+        8.25,
+        0,
+    ] as const;
+}
+
+function detailRoadOpacity(
+    sceneMode: "day" | "night"
+) {
+    return [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        DETAIL_VIEW_ZOOM,
+        0,
+        8,
+        sceneMode === "day"
+            ? 0.24
+            : 0.18,
+        11,
+        sceneMode === "day"
+            ? 0.48
+            : 0.34,
+        16,
+        sceneMode === "day"
+            ? 0.68
+            : 0.48,
+    ] as const;
+}
+
+/* =========================================
    PROPS
 ========================================= */
 
@@ -333,34 +383,6 @@ export default function AtlasGlobe({
 
     const idleSpinSpeedRef =
         useRef(0);
-
-    /* =========================================
-       DETAIL / CLUSTER LIVE REFERENCES
-
-       Cluster layer event handlers are attached
-       once when MapLibre loads. These refs keep
-       them connected to the latest React props.
-    ========================================= */
-
-    const pinsByIdRef =
-        useRef<
-            globalThis.Map<string, AtlasPin>
-        >(
-            new globalThis.Map()
-        );
-
-    const onSelectPinRef =
-        useRef(
-            onSelectPin
-        );
-
-    useEffect(() => {
-        onSelectPinRef.current =
-            onSelectPin;
-    }, [
-        onSelectPin,
-    ]);
-
 
     /* =========================================
        CREATE MAP
@@ -500,6 +522,144 @@ export default function AtlasGlobe({
                             "/data/world-countries.geojson",
                     }
                 );
+
+                const initialStyle =
+                    atlasModeStyles.present;
+
+                /* -------------------------------------
+                   LAND
+                ------------------------------------- */
+
+                map.addLayer({
+                    id: "land",
+
+                    type: "fill",
+
+                    source: "countries",
+
+                    paint: {
+                        "fill-color":
+                            initialStyle.landColor,
+
+                        "fill-opacity":
+                            initialStyle.landOpacity,
+
+                        "fill-color-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+
+                        "fill-opacity-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+                    },
+                });
+
+                /* -------------------------------------
+                   LAND EDGE GLOW
+
+                   Uses a wider blurred line beneath the
+                   crisp edge. With the current countries
+                   GeoJSON this follows polygon edges.
+                   A dedicated coastline source can later
+                   make this truly coast-only.
+                ------------------------------------- */
+
+                map.addLayer({
+                    id: "land-glow",
+
+                    type: "line",
+
+                    source: "countries",
+
+                    paint: {
+                        "line-color":
+                            NIGHT_GLOBE.coast,
+
+                        "line-width": 3.6,
+
+                        "line-blur": 2.4,
+
+                        "line-opacity":
+                            NIGHT_GLOBE.coastGlowOpacity,
+
+                        "line-color-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+
+                        "line-opacity-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+                    },
+                });
+
+                /* -------------------------------------
+                   CRISP LAND EDGE
+                ------------------------------------- */
+
+                map.addLayer({
+                    id: "land-light",
+
+                    type: "line",
+
+                    source: "countries",
+
+                    paint: {
+                        "line-color":
+                            NIGHT_GLOBE.coast,
+
+                        "line-width": 1.05,
+
+                        "line-opacity":
+                            NIGHT_GLOBE.coastOpacity,
+
+                        "line-color-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+
+                        "line-opacity-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+                    },
+                });
+
+                /* -------------------------------------
+                   COUNTRY BORDERS
+                ------------------------------------- */
+
+                map.addLayer({
+                    id: "country-borders",
+
+                    type: "line",
+
+                    source: "countries",
+
+                    paint: {
+                        "line-color":
+                            NIGHT_GLOBE.country,
+
+                        "line-width": 0.42,
+
+                        "line-opacity":
+                            NIGHT_GLOBE.countryOpacity,
+
+                        "line-color-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+
+                        "line-opacity-transition": {
+                            duration: 450,
+                            delay: 0,
+                        },
+                    },
+                });
+
 
                 /* -------------------------------------
                    DETAIL CITY STRUCTURE
@@ -645,6 +805,7 @@ export default function AtlasGlobe({
                     },
                 });
 
+
                 /* -------------------------------------
                    PIN CLUSTER SOURCE
 
@@ -700,18 +861,18 @@ export default function AtlasGlobe({
                                 "get",
                                 "point_count",
                             ],
-                            18,
+                            11,
                             6,
-                            22,
+                            13,
                             15,
-                            27,
+                            16,
                         ],
 
                         "circle-color":
                             "rgba(7, 9, 13, 0.90)",
 
                         "circle-stroke-color":
-                            "#27c7ff",
+                            "#ffd54a",
 
                         "circle-stroke-width":
                             1.4,
@@ -743,11 +904,20 @@ export default function AtlasGlobe({
                         "text-field":
                             "{point_count_abbreviated}",
 
-                        "text-size":
-                            11,
+                        "text-size": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            1,
+                            14,
+                            5,
+                            15,
+                            9,
+                            16,
+                        ],
 
                         "text-font": [
-                            "Open Sans Regular",
+                            "Open Sans Bold",
                         ],
 
                         "text-allow-overlap":
@@ -756,52 +926,13 @@ export default function AtlasGlobe({
 
                     paint: {
                         "text-color":
-                            "#8de4ff",
+                            "#ffd54a",
 
                         "text-halo-color":
                             "#07090d",
 
                         "text-halo-width":
-                            1,
-                    },
-                });
-
-                map.addLayer({
-                    id:
-                        "atlas-pin-unclustered",
-
-                    type:
-                        "circle",
-
-                    source:
-                        "atlas-pin-clusters",
-
-                    filter: [
-                        "!",
-                        [
-                            "has",
-                            "point_count",
-                        ],
-                    ],
-
-                    maxzoom:
-                        PIN_CLUSTER_MAX_ZOOM + 1,
-
-                    paint: {
-                        "circle-radius":
-                            5,
-
-                        "circle-color":
-                            "#07090d",
-
-                        "circle-stroke-color":
-                            "#27c7ff",
-
-                        "circle-stroke-width":
-                            1.2,
-
-                        "circle-opacity":
-                            0.96,
+                            1.5,
                     },
                 });
 
@@ -891,46 +1022,6 @@ export default function AtlasGlobe({
                         });
                     };
 
-                const handleUnclusteredPinClick =
-                    (
-                        event:
-                            MapMouseEvent
-                    ) => {
-                        const feature =
-                            map.queryRenderedFeatures(
-                                event.point,
-                                {
-                                    layers: [
-                                        "atlas-pin-unclustered",
-                                    ],
-                                }
-                            )[0];
-
-                        const pinId =
-                            feature?.properties
-                                ?.pin_id;
-
-                        if (
-                            typeof pinId !==
-                            "string"
-                        ) {
-                            return;
-                        }
-
-                        const pin =
-                            pinsByIdRef.current.get(
-                                pinId
-                            );
-
-                        if (!pin) {
-                            return;
-                        }
-
-                        onSelectPinRef.current(
-                            pin
-                        );
-                    };
-
                 map.on(
                     "click",
                     "atlas-pin-cluster-glow",
@@ -941,12 +1032,6 @@ export default function AtlasGlobe({
                     "click",
                     "atlas-pin-cluster-count",
                     handleClusterClick
-                );
-
-                map.on(
-                    "click",
-                    "atlas-pin-unclustered",
-                    handleUnclusteredPinClick
                 );
 
                 const showPointer =
@@ -971,160 +1056,10 @@ export default function AtlasGlobe({
                 );
 
                 map.on(
-                    "mouseenter",
-                    "atlas-pin-unclustered",
-                    showPointer
-                );
-
-                map.on(
                     "mouseleave",
                     "atlas-pin-cluster-glow",
                     restorePointer
                 );
-
-                map.on(
-                    "mouseleave",
-                    "atlas-pin-unclustered",
-                    restorePointer
-                );
-
-                const initialStyle =
-                    atlasModeStyles.present;
-
-                /* -------------------------------------
-                   LAND
-                ------------------------------------- */
-
-                map.addLayer({
-                    id: "land",
-
-                    type: "fill",
-
-                    source: "countries",
-
-                    paint: {
-                        "fill-color":
-                            initialStyle.landColor,
-
-                        "fill-opacity":
-                            initialStyle.landOpacity,
-
-                        "fill-color-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-
-                        "fill-opacity-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-                    },
-                });
-
-                /* -------------------------------------
-                   LAND EDGE GLOW
-
-                   Uses a wider blurred line beneath the
-                   crisp edge. With the current countries
-                   GeoJSON this follows polygon edges.
-                   A dedicated coastline source can later
-                   make this truly coast-only.
-                ------------------------------------- */
-
-                map.addLayer({
-                    id: "land-glow",
-
-                    type: "line",
-
-                    source: "countries",
-
-                    paint: {
-                        "line-color":
-                            NIGHT_GLOBE.coast,
-
-                        "line-width": 3.6,
-
-                        "line-blur": 2.4,
-
-                        "line-opacity":
-                            NIGHT_GLOBE.coastGlowOpacity,
-
-                        "line-color-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-
-                        "line-opacity-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-                    },
-                });
-
-                /* -------------------------------------
-                   CRISP LAND EDGE
-                ------------------------------------- */
-
-                map.addLayer({
-                    id: "land-light",
-
-                    type: "line",
-
-                    source: "countries",
-
-                    paint: {
-                        "line-color":
-                            NIGHT_GLOBE.coast,
-
-                        "line-width": 1.05,
-
-                        "line-opacity":
-                            NIGHT_GLOBE.coastOpacity,
-
-                        "line-color-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-
-                        "line-opacity-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-                    },
-                });
-
-                /* -------------------------------------
-                   COUNTRY BORDERS
-                ------------------------------------- */
-
-                map.addLayer({
-                    id: "country-borders",
-
-                    type: "line",
-
-                    source: "countries",
-
-                    paint: {
-                        "line-color":
-                            NIGHT_GLOBE.country,
-
-                        "line-width": 0.42,
-
-                        "line-opacity":
-                            NIGHT_GLOBE.countryOpacity,
-
-                        "line-color-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-
-                        "line-opacity-transition": {
-                            duration: 450,
-                            delay: 0,
-                        },
-                    },
-                });
-
 
             }
         );
@@ -1945,7 +1880,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land",
                 "fill-opacity",
-                0.62
+                worldOverlayOpacity(
+                    0.62
+                )
             );
 
             map.setPaintProperty(
@@ -1957,7 +1894,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-glow",
                 "line-opacity",
-                0.08
+                worldOverlayOpacity(
+                    0.08
+                )
             );
 
             map.setPaintProperty(
@@ -1969,7 +1908,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-light",
                 "line-opacity",
-                0.28
+                worldOverlayOpacity(
+                    0.28
+                )
             );
 
             map.setPaintProperty(
@@ -1981,7 +1922,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "country-borders",
                 "line-opacity",
-                0.18
+                worldOverlayOpacity(
+                    0.18
+                )
             );
 
             map.getCanvas().style.cursor =
@@ -2022,7 +1965,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land",
                 "fill-opacity",
-                ALL_GLOBE.landOpacity
+                worldOverlayOpacity(
+                    ALL_GLOBE.landOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2034,7 +1979,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-glow",
                 "line-opacity",
-                ALL_GLOBE.glowOpacity
+                worldOverlayOpacity(
+                    ALL_GLOBE.glowOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2046,7 +1993,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-light",
                 "line-opacity",
-                ALL_GLOBE.edgeOpacity
+                worldOverlayOpacity(
+                    ALL_GLOBE.edgeOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2058,7 +2007,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "country-borders",
                 "line-opacity",
-                ALL_GLOBE.countryOpacity
+                worldOverlayOpacity(
+                    ALL_GLOBE.countryOpacity
+                )
             );
 
             map.getCanvas().style.cursor =
@@ -2123,7 +2074,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land",
                 "fill-opacity",
-                DAY_GLOBE.landOpacity
+                worldOverlayOpacity(
+                    DAY_GLOBE.landOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2135,7 +2088,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-glow",
                 "line-opacity",
-                DAY_GLOBE.coastGlowOpacity
+                worldOverlayOpacity(
+                    DAY_GLOBE.coastGlowOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2147,7 +2102,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-light",
                 "line-opacity",
-                DAY_GLOBE.coastOpacity
+                worldOverlayOpacity(
+                    DAY_GLOBE.coastOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2159,7 +2116,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "country-borders",
                 "line-opacity",
-                DAY_GLOBE.countryOpacity
+                worldOverlayOpacity(
+                    DAY_GLOBE.countryOpacity
+                )
             );
         } else {
             /*
@@ -2182,7 +2141,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land",
                 "fill-opacity",
-                presentNight.landOpacity
+                worldOverlayOpacity(
+                    presentNight.landOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2194,7 +2155,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-glow",
                 "line-opacity",
-                NIGHT_GLOBE.coastGlowOpacity
+                worldOverlayOpacity(
+                    NIGHT_GLOBE.coastGlowOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2206,7 +2169,9 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "land-light",
                 "line-opacity",
-                NIGHT_GLOBE.coastOpacity
+                worldOverlayOpacity(
+                    NIGHT_GLOBE.coastOpacity
+                )
             );
 
             map.setPaintProperty(
@@ -2218,7 +2183,75 @@ export default function AtlasGlobe({
             map.setPaintProperty(
                 "country-borders",
                 "line-opacity",
-                NIGHT_GLOBE.countryOpacity
+                worldOverlayOpacity(
+                    NIGHT_GLOBE.countryOpacity
+                )
+            );
+        }
+
+        /*
+          DETAIL VIEW POLARITY
+
+          At close zoom the physical map becomes the base.
+          Night keeps the current luminous street skeleton.
+          Day flips that skeleton darker so it remains crisp
+          against the brighter environment instead of washing out.
+        */
+        if (
+            map.getLayer(
+                "atlas-detail-roads"
+            )
+        ) {
+            map.setPaintProperty(
+                "atlas-detail-roads",
+                "line-color",
+                sceneMode === "day"
+                    ? "#163744"
+                    : "#7893a0"
+            );
+
+            map.setPaintProperty(
+                "atlas-detail-roads",
+                "line-opacity",
+                detailRoadOpacity(
+                    sceneMode
+                )
+            );
+        }
+
+        if (
+            map.getLayer(
+                "atlas-detail-buildings"
+            )
+        ) {
+            map.setPaintProperty(
+                "atlas-detail-buildings",
+                "fill-color",
+                sceneMode === "day"
+                    ? "#17302d"
+                    : "#17232b"
+            );
+
+            map.setPaintProperty(
+                "atlas-detail-buildings",
+                "fill-outline-color",
+                sceneMode === "day"
+                    ? "#244b4f"
+                    : "#3b5968"
+            );
+        }
+
+        if (
+            map.getLayer(
+                "atlas-detail-landuse"
+            )
+        ) {
+            map.setPaintProperty(
+                "atlas-detail-landuse",
+                "fill-color",
+                sceneMode === "day"
+                    ? "#173b31"
+                    : "#10241d"
             );
         }
 
@@ -2240,16 +2273,6 @@ export default function AtlasGlobe({
     ========================================= */
 
     useEffect(() => {
-        pinsByIdRef.current =
-            new globalThis.Map(
-                pins.map(
-                    (pin) => [
-                        pin.id,
-                        pin,
-                    ]
-                )
-            );
-
         const map =
             mapRef.current;
 
@@ -2335,10 +2358,10 @@ export default function AtlasGlobe({
     /* =========================================
        DOM PIN VISIBILITY
 
-       Below the final cluster zoom, MapLibre owns
-       the navigation representation. At close
-       range, the original Life Atlas DOM Pins
-       return unchanged.
+       Original Life Atlas DOM Pins are canonical
+       at every zoom. MapLibre supplies cluster roots
+       only. Individual Pins disappear only while
+       they are actual members of a visible cluster.
     ========================================= */
 
     /* =========================================
@@ -2413,6 +2436,14 @@ export default function AtlasGlobe({
                 "aria-label",
                 `Open ${pin.title}`
             );
+
+            /*
+              Keep the real Pin identity on the DOM marker.
+              Clustering will hide only Pins that currently
+              belong to a visible cluster.
+            */
+            element.dataset.pinId =
+                pin.id;
 
             const hoverLabel =
                 document.createElement(
@@ -2530,36 +2561,175 @@ export default function AtlasGlobe({
             );
         });
 
+        /*
+          CANONICAL SOLO PIN VISIBILITY
+
+          Original DOM Pins remain the real solo Pin at every
+          zoom level. MapLibre is used only for cluster roots.
+
+          Below the cluster threshold we ask the clustered source
+          which points are currently unclustered. Those Pins stay
+          visible. Pins absorbed into a cluster are hidden until
+          that cluster splits again.
+
+          Above clusterMaxZoom every original Pin is shown.
+        */
         const syncDomPinVisibility =
             () => {
-                const showDomPins =
+                if (
                     map.getZoom() >
-                    PIN_CLUSTER_MAX_ZOOM;
+                    PIN_CLUSTER_MAX_ZOOM
+                ) {
+                    savedMarkersRef.current.forEach(
+                        (marker) => {
+                            marker
+                                .getElement()
+                                .style
+                                .display =
+                                "";
+                        }
+                    );
+
+                    return;
+                }
+
+                const source =
+                    map.getSource(
+                        "atlas-pin-clusters"
+                    );
+
+                /*
+                  Never blank Pins while the cluster source is
+                  still loading. Keeping the DOM Pins visible is
+                  the safe fallback and preserves the old Atlas
+                  behavior during source refreshes.
+                */
+                if (
+                    !source ||
+                    !map.isSourceLoaded(
+                        "atlas-pin-clusters"
+                    )
+                ) {
+                    savedMarkersRef.current.forEach(
+                        (marker) => {
+                            marker
+                                .getElement()
+                                .style
+                                .display =
+                                "";
+                        }
+                    );
+
+                    return;
+                }
+
+                const sourceFeatures =
+                    map.querySourceFeatures(
+                        "atlas-pin-clusters"
+                    );
+
+                const soloPinIds =
+                    new Set<string>();
+
+                sourceFeatures.forEach(
+                    (feature) => {
+                        /*
+                          Cluster features have point_count.
+                          Leaf / solo features retain pin_id.
+                        */
+                        if (
+                            feature.properties
+                                ?.point_count !==
+                            undefined
+                        ) {
+                            return;
+                        }
+
+                        const pinId =
+                            feature.properties
+                                ?.pin_id;
+
+                        if (
+                            typeof pinId ===
+                            "string"
+                        ) {
+                            soloPinIds.add(
+                                pinId
+                            );
+                        }
+                    }
+                );
+
+                /*
+                  If tiles are between states, do not interpret an
+                  empty query as "hide everything." Wait for the next
+                  source/render event instead.
+                */
+                if (
+                    sourceFeatures.length ===
+                    0
+                ) {
+                    return;
+                }
 
                 savedMarkersRef.current.forEach(
                     (marker) => {
-                        marker
-                            .getElement()
-                            .style
-                            .display =
-                            showDomPins
+                        const element =
+                            marker.getElement();
+
+                        const pinId =
+                            element.dataset
+                                .pinId;
+
+                        element.style.display =
+                            pinId &&
+                                soloPinIds.has(
+                                    pinId
+                                )
                                 ? ""
                                 : "none";
                     }
                 );
             };
 
+        const schedulePinVisibilitySync =
+            () => {
+                requestAnimationFrame(
+                    syncDomPinVisibility
+                );
+            };
+
         syncDomPinVisibility();
 
         map.on(
-            "zoom",
-            syncDomPinVisibility
+            "zoomend",
+            schedulePinVisibilitySync
+        );
+
+        map.on(
+            "moveend",
+            schedulePinVisibilitySync
+        );
+
+        map.on(
+            "sourcedata",
+            schedulePinVisibilitySync
         );
 
         return () => {
             map.off(
-                "zoom",
-                syncDomPinVisibility
+                "zoomend",
+                schedulePinVisibilitySync
+            );
+
+            map.off(
+                "moveend",
+                schedulePinVisibilitySync
+            );
+
+            map.off(
+                "sourcedata",
+                schedulePinVisibilitySync
             );
         };
     }, [

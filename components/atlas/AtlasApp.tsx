@@ -1997,19 +1997,21 @@ export default function AtlasApp({
                     /*
                       COLLECTION FOCUS
 
-                      Global Atlas viewing is now:
-                      ALL or one Collection.
+                      A Collection is a persistent lens,
+                      not a toggle.
 
-                      Pins may still belong to many
-                      Collections underneath. This only
-                      simplifies the active viewing lens.
+                      Clicking the active Collection again
+                      leaves it selected. The Collection
+                      changes only when another Collection
+                      is chosen or ALL explicitly clears
+                      Collection filtering.
                     */
 
                     if (
                         current[0] ===
                         collectionId
                     ) {
-                        return [];
+                        return current;
                     }
 
                     return [
@@ -3301,9 +3303,15 @@ export default function AtlasApp({
             {/* DAY / NIGHT */}
 
             <div
-                className="atlas-day-night-toggle"
+                className={`atlas-day-night-toggle ${worldState === "all"
+                        ? "is-hidden-in-all"
+                        : ""
+                    }`}
                 role="group"
                 aria-label="Atlas time of day"
+                aria-hidden={
+                    worldState === "all"
+                }
             >
                 <button
                     type="button"
@@ -3353,6 +3361,23 @@ export default function AtlasApp({
                     setWorldState(
                         state
                     );
+
+                    /*
+                      TOP-LEVEL ALL = GRAND RESET
+
+                      ALL means all time + all Collections.
+                      Past / Present / Future continue to
+                      combine with the currently selected
+                      Collection as before.
+                    */
+                    if (
+                        state ===
+                        "all"
+                    ) {
+                        setSelectedCollectionIds(
+                            []
+                        );
+                    }
 
                     if (
                         state !==
