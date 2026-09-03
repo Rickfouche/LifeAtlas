@@ -543,7 +543,9 @@ export default function AtlasGlobe({
                             initialStyle.landColor,
 
                         "fill-opacity":
-                            initialStyle.landOpacity,
+                            worldOverlayOpacity(
+                                initialStyle.landOpacity
+                            ),
 
                         "fill-color-transition": {
                             duration: 450,
@@ -583,7 +585,9 @@ export default function AtlasGlobe({
                         "line-blur": 2.4,
 
                         "line-opacity":
-                            NIGHT_GLOBE.coastGlowOpacity,
+                            worldOverlayOpacity(
+                                NIGHT_GLOBE.coastGlowOpacity
+                            ),
 
                         "line-color-transition": {
                             duration: 450,
@@ -615,7 +619,9 @@ export default function AtlasGlobe({
                         "line-width": 1.05,
 
                         "line-opacity":
-                            NIGHT_GLOBE.coastOpacity,
+                            worldOverlayOpacity(
+                                NIGHT_GLOBE.coastOpacity
+                            ),
 
                         "line-color-transition": {
                             duration: 450,
@@ -647,7 +653,9 @@ export default function AtlasGlobe({
                         "line-width": 0.42,
 
                         "line-opacity":
-                            NIGHT_GLOBE.countryOpacity,
+                            worldOverlayOpacity(
+                                NIGHT_GLOBE.countryOpacity
+                            ),
 
                         "line-color-transition": {
                             duration: 450,
