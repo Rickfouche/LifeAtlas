@@ -9,7 +9,6 @@ import {
 } from "react";
 
 import { createClient } from "@/lib/supabase/client";
-import CalendarMomentImporter from "@/components/atlas/CalendarMomentImporter";
 
 import type {
     AtlasCollection,
@@ -1268,16 +1267,6 @@ export default function AtlasPanel({
     ] = useState(false);
 
     const [
-        isMomentAddMenuOpen,
-        setIsMomentAddMenuOpen,
-    ] = useState(false);
-
-    const [
-        isCalendarMomentImporterOpen,
-        setIsCalendarMomentImporterOpen,
-    ] = useState(false);
-
-    const [
         editingMomentId,
         setEditingMomentId,
     ] =
@@ -1581,14 +1570,6 @@ export default function AtlasPanel({
                 false
             );
 
-            setIsMomentAddMenuOpen(
-                false
-            );
-
-            setIsCalendarMomentImporterOpen(
-                false
-            );
-
             setEditingMomentId(
                 null
             );
@@ -1686,14 +1667,6 @@ export default function AtlasPanel({
             );
 
             setIsMomentFormOpen(
-                false
-            );
-
-            setIsMomentAddMenuOpen(
-                false
-            );
-
-            setIsCalendarMomentImporterOpen(
                 false
             );
 
@@ -2150,14 +2123,6 @@ export default function AtlasPanel({
                 false
             );
 
-            setIsMomentAddMenuOpen(
-                false
-            );
-
-            setIsCalendarMomentImporterOpen(
-                false
-            );
-
             setEditingMomentId(
                 null
             );
@@ -2177,14 +2142,6 @@ export default function AtlasPanel({
 
     const openNewMomentForm =
         () => {
-            setIsMomentAddMenuOpen(
-                false
-            );
-
-            setIsCalendarMomentImporterOpen(
-                false
-            );
-
             setEditingMomentId(
                 null
             );
@@ -2207,62 +2164,6 @@ export default function AtlasPanel({
 
             setIsMomentFormOpen(
                 true
-            );
-        };
-
-    const handleCalendarMomentsImported =
-        (
-            importedMoments:
-                AtlasPinMoment[]
-        ) => {
-            if (
-                !selectedPin ||
-                importedMoments.length ===
-                0
-            ) {
-                return;
-            }
-
-            const byId =
-                new Map(
-                    [
-                        ...moments,
-                        ...importedMoments,
-                    ].map(
-                        (moment) => [
-                            moment.id,
-                            moment,
-                        ]
-                    )
-                );
-
-            const nextMoments =
-                Array.from(
-                    byId.values()
-                ).sort(
-                    (a, b) =>
-                        new Date(
-                            a.start_at
-                        ).getTime() -
-                        new Date(
-                            b.start_at
-                        ).getTime()
-                );
-
-            setMoments(
-                nextMoments
-            );
-
-            onMomentsChange(
-                selectedPin.id,
-                nextMoments
-            );
-
-            setSelectedMomentIds(
-                importedMoments.map(
-                    (moment) =>
-                        moment.id
-                )
             );
         };
 
@@ -7364,42 +7265,11 @@ export default function AtlasPanel({
                     {(selectedPin ||
                         draftPin) && (
                             <div className="atlas-field atlas-moments-field">
-                                <div className="atlas-moment-heading-row">
-                                    <span>
-                                        MOMENTS
-                                    </span>
+                                <span>
+                                    MOMENTS
+                                </span>
 
-                                    <div className="atlas-moment-heading-actions">
-                                        <button
-                                            type="button"
-                                            className="atlas-moment-add-fixed"
-                                            onClick={() => {
-                                                setIsMomentAddMenuOpen(
-                                                    (
-                                                        current
-                                                    ) =>
-                                                        !current
-                                                );
-
-                                                setIsCalendarMomentImporterOpen(
-                                                    false
-                                                );
-
-                                                setIsMomentFormOpen(
-                                                    false
-                                                );
-                                            }}
-                                            aria-label="Add moment"
-                                            aria-expanded={
-                                                isMomentAddMenuOpen
-                                            }
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="atlas-moment-brick-tray">
+                                <div className="atlas-moment-ribbon">
                                     <button
                                         type="button"
                                         className={`atlas-moment-chip ${selectedMomentIds.length ===
@@ -7453,60 +7323,18 @@ export default function AtlasPanel({
                                             </button>
                                         )
                                     )}
+
+                                    <button
+                                        type="button"
+                                        className="atlas-moment-chip atlas-moment-chip--add"
+                                        onClick={
+                                            openNewMomentForm
+                                        }
+                                        aria-label="Add moment"
+                                    >
+                                        +
+                                    </button>
                                 </div>
-
-                                {isMomentAddMenuOpen && (
-                                    <div className="atlas-moment-add-menu">
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                openNewMomentForm
-                                            }
-                                        >
-                                            NEW MOMENT
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsMomentAddMenuOpen(
-                                                    false
-                                                );
-
-                                                setIsMomentFormOpen(
-                                                    false
-                                                );
-
-                                                setIsCalendarMomentImporterOpen(
-                                                    true
-                                                );
-
-                                                setMomentError(
-                                                    ""
-                                                );
-                                            }}
-                                        >
-                                            FROM CALENDAR
-                                        </button>
-                                    </div>
-                                )}
-
-                                {isCalendarMomentImporterOpen &&
-                                    selectedPin && (
-                                        <CalendarMomentImporter
-                                            pinId={
-                                                selectedPin.id
-                                            }
-                                            onImported={
-                                                handleCalendarMomentsImported
-                                            }
-                                            onCancel={() =>
-                                                setIsCalendarMomentImporterOpen(
-                                                    false
-                                                )
-                                            }
-                                        />
-                                    )}
 
                                 {isLoadingMoments && (
                                     <div className="atlas-moment-status">

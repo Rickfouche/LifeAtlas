@@ -3,6 +3,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /* =========================================
+   TYPES
+========================================= */
+
+type AtlasMomentSource =
+    | "manual"
+    | "google_calendar";
+
+/* =========================================
    HELPERS
 ========================================= */
 
@@ -20,6 +28,18 @@ function normalizeMomentType(
     return "date";
 }
 
+function normalizeMomentSource(
+    value: unknown
+): AtlasMomentSource {
+    if (
+        value === "google_calendar"
+    ) {
+        return value;
+    }
+
+    return "manual";
+}
+
 function normalizeNullableString(
     value: unknown
 ) {
@@ -34,6 +54,29 @@ function normalizeNullableString(
 
     return trimmed || null;
 }
+
+/* =========================================
+   SHARED SELECT
+========================================= */
+
+const MOMENT_SELECT = `
+    id,
+    pin_id,
+    title,
+    moment_type,
+    start_at,
+    end_at,
+    timezone,
+    notes,
+    cover_media_id,
+    source,
+    external_event_id,
+    external_calendar_id,
+    external_series_id,
+    metadata,
+    created_at,
+    updated_at
+`;
 
 /* =========================================
    GET
@@ -126,19 +169,9 @@ export async function GET(
             error: momentsError,
         } = await supabase
             .from("pin_moments")
-            .select(`
-        id,
-        pin_id,
-        title,
-        moment_type,
-        start_at,
-        end_at,
-        timezone,
-        notes,
-        metadata,
-        created_at,
-        updated_at
-      `)
+            .select(
+                MOMENT_SELECT
+            )
             .eq(
                 "pin_id",
                 pinId
@@ -201,6 +234,17 @@ export async function GET(
 /* =========================================
    POST
    Create a moment
+
+   Manual UI does not need to send source.
+   It defaults to "manual".
+
+   Calendar import will later send:
+   {
+     source: "google_calendar",
+     externalEventId,
+     externalCalendarId,
+     externalSeriesId?
+   }
 ========================================= */
 
 export async function POST(
@@ -288,6 +332,11 @@ export async function POST(
                 body.momentType
             );
 
+        const source =
+            normalizeMomentSource(
+                body.source
+            );
+
         const title =
             normalizeNullableString(
                 body.title
@@ -302,6 +351,118 @@ export async function POST(
             normalizeNullableString(
                 body.notes
             );
+
+        const externalEventId =
+            normalizeNullableString(
+                body.externalEventId
+            );
+
+        const externalCalendarId =
+            normalizeNullableString(
+                body.externalCalendarId
+            );
+
+        const externalSeriesId =
+            normalizeNullableString(
+                body.externalSeriesId
+            );
+
+        if (
+            source ===
+            "google_calendar" &&
+            (
+                !externalEventId ||
+                !externalCalendarId
+            )
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Google Calendar moments require event and calendar identity.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+        /*
+          Duplicate protection before INSERT gives
+          the client a useful response instead of
+          relying only on the database unique index.
+        */
+        if (
+            source ===
+            "google_calendar" &&
+            externalEventId &&
+            externalCalendarId
+        ) {
+            const {
+                data: existingMoment,
+                error:
+                existingMomentError,
+            } = await supabase
+                .from(
+                    "pin_moments"
+                )
+                .select(
+                    MOMENT_SELECT
+                )
+                .eq(
+                    "user_id",
+                    user.id
+                )
+                .eq(
+                    "pin_id",
+                    pinId
+                )
+                .eq(
+                    "source",
+                    "google_calendar"
+                )
+                .eq(
+                    "external_calendar_id",
+                    externalCalendarId
+                )
+                .eq(
+                    "external_event_id",
+                    externalEventId
+                )
+                .maybeSingle();
+
+            if (
+                existingMomentError
+            ) {
+                console.error(
+                    "Could not check Calendar moment duplicate:",
+                    existingMomentError
+                );
+
+                return NextResponse.json(
+                    {
+                        error:
+                            "Could not validate Calendar moment.",
+                    },
+                    {
+                        status: 500,
+                    }
+                );
+            }
+
+            if (existingMoment) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "This Calendar event is already attached to this Pin.",
+                        moment:
+                            existingMoment,
+                    },
+                    {
+                        status: 409,
+                    }
+                );
+            }
+        }
 
         const startAt =
             typeof body.startAt ===
@@ -440,21 +601,31 @@ export async function POST(
 
                 notes,
 
+                source,
+
+                external_event_id:
+                    source ===
+                        "google_calendar"
+                        ? externalEventId
+                        : null,
+
+                external_calendar_id:
+                    source ===
+                        "google_calendar"
+                        ? externalCalendarId
+                        : null,
+
+                external_series_id:
+                    source ===
+                        "google_calendar"
+                        ? externalSeriesId
+                        : null,
+
                 metadata,
             })
-            .select(`
-        id,
-        pin_id,
-        title,
-        moment_type,
-        start_at,
-        end_at,
-        timezone,
-        notes,
-        metadata,
-        created_at,
-        updated_at
-      `)
+            .select(
+                MOMENT_SELECT
+            )
             .single();
 
         if (

@@ -4672,3 +4672,640 @@ select {
         pointer-events: none;
         transform: translateY(-6px);
     }
+
+
+/* =========================================
+   PASS 10B — ATLAS EXPLORER + COLLECTION ORDER
+   -----------------------------------------
+   The old single drawer tab becomes a small
+   persistent rail. Collections remains the
+   default view. Search now owns Place Search.
+========================================= */
+
+.atlas-explorer-rail {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 44px;
+    border: 1px solid rgba(39, 199, 255, 0.24);
+    border-left: 0;
+    border-radius: 0 5px 5px 0;
+    overflow: hidden;
+    background: rgba(10, 16, 22, 0.86);
+    backdrop-filter: blur(14px);
+}
+
+.atlas-explorer-rail-button {
+    appearance: none;
+    width: 44px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-bottom: 1px solid rgba(141, 228, 255, 0.08);
+    padding: 0;
+    background: transparent;
+    color: rgba(141, 228, 255, 0.38);
+    cursor: pointer;
+    transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+    .atlas-explorer-rail-button:last-child {
+        border-bottom: 0;
+    }
+
+    .atlas-explorer-rail-button:hover,
+    .atlas-explorer-rail-button.is-active {
+        color: var(--atlas-blue);
+        background: rgba(39, 199, 255, 0.045);
+    }
+
+    .atlas-explorer-rail-button.is-active {
+        box-shadow: inset 2px 0 0 rgba(39, 199, 255, 0.72);
+    }
+
+.atlas-explorer-rail-button--collections
+.atlas-tab-sigil {
+    font-size: 17px;
+    transform: rotate(45deg);
+}
+
+.atlas-explorer-search-sigil {
+    font-size: 20px;
+    line-height: 1;
+}
+
+/*
+  The rail replaces the legacy one-off tab.
+  Keep the old selector harmless if stale
+  markup exists during hot reload.
+*/
+.atlas-drawer > .atlas-drawer-tab {
+    display: none;
+}
+
+.atlas-drawer-content {
+    min-height: 300px;
+}
+
+/* Search now has its own Explorer surface. */
+.atlas-place-search--explorer {
+    padding-top: 0;
+}
+
+/* =========================================
+   COLLECTION REORDER
+========================================= */
+
+.atlas-collection-row {
+    position: relative;
+    width: 100%;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    transition: opacity 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+    .atlas-collection-row.is-dragging {
+        opacity: 0.34;
+    }
+
+    .atlas-collection-row.is-drag-target {
+        border-top-color: rgba(39, 199, 255, 0.42);
+        background: rgba(39, 199, 255, 0.025);
+    }
+
+.atlas-collection-row-main {
+    display: grid;
+    grid-template-columns: 18px 24px minmax(0, 1fr) 26px;
+    gap: 3px;
+    align-items: center;
+}
+
+.atlas-collection-list
+.atlas-collection-row-main
+button {
+    min-width: 0;
+}
+
+.atlas-collection-drag-handle {
+    padding: 0 !important;
+    text-align: center !important;
+    color: rgba(141, 228, 255, 0.20) !important;
+    cursor: grab !important;
+    letter-spacing: -0.10em !important;
+    user-select: none;
+}
+
+.atlas-collection-row:active
+.atlas-collection-drag-handle {
+    cursor: grabbing !important;
+}
+
+.atlas-collection-expand,
+.atlas-collection-manage {
+    padding: 0 !important;
+    text-align: center !important;
+}
+
+.atlas-collection-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-collection-pins {
+    padding: 4px 0 8px 42px;
+}
+
+.atlas-collection-pin {
+    display: block;
+    width: 100%;
+    padding: 7px 8px !important;
+    text-align: left;
+    opacity: 0.78;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.atlas-collection-empty {
+    padding: 6px 4px;
+    color: rgba(241, 238, 230, 0.28);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+.atlas-collection-management {
+    margin: 5px 0 9px 42px;
+    padding: 8px;
+    border: 1px solid rgba(141, 228, 255, 0.14);
+    background: rgba(3, 10, 17, 0.58);
+}
+
+    .atlas-collection-management input {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid rgba(39, 199, 255, 0.34);
+        padding: 6px 0;
+        outline: none;
+        background: transparent;
+        color: var(--atlas-text);
+        font-size: 10px;
+    }
+
+.atlas-collection-management-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+    .atlas-collection-management-actions button {
+        width: auto !important;
+        padding: 4px 0 !important;
+    }
+
+.atlas-collection-error {
+    margin: 7px 0;
+    color: rgba(255, 125, 125, 0.78);
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+/* Mobile keeps the rail reachable beside the wider drawer. */
+@media (max-width: 768px) {
+    .atlas-explorer-rail {
+        width: 42px;
+    }
+
+    .atlas-explorer-rail-button {
+        width: 42px;
+        height: 48px;
+    }
+
+    .atlas-collection-row-main {
+        grid-template-columns: 18px 22px minmax(0, 1fr) 24px;
+    }
+}
+
+
+/* =========================================
+   PASS 10C — CONNECTIONS
+========================================= */
+
+.atlas-explorer-connection-sigil {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.atlas-connections-list {
+    padding-top: 2px;
+}
+
+.atlas-connection-card {
+    padding: 12px 0 14px;
+    border-top: 1px solid rgba(141, 228, 255, 0.09);
+    border-bottom: 1px solid rgba(141, 228, 255, 0.09);
+}
+
+.atlas-connection-provider {
+    color: var(--atlas-text);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+}
+
+.atlas-connection-status {
+    margin-top: 10px;
+    color: rgba(241, 238, 230, 0.38);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+}
+
+    .atlas-connection-status.is-connected {
+        color: rgba(147, 255, 189, 0.82);
+    }
+
+.atlas-connection-account {
+    margin-top: 5px;
+    color: rgba(241, 238, 230, 0.62);
+    font-size: 10px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.atlas-connection-action {
+    appearance: none;
+    width: auto;
+    margin-top: 13px;
+    border: 1px solid rgba(141, 228, 255, 0.18);
+    border-radius: 2px;
+    padding: 7px 9px;
+    background: transparent;
+    color: rgba(141, 228, 255, 0.68);
+    font: inherit;
+    font-size: 9px;
+    letter-spacing: 0.10em;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+    .atlas-connection-action:hover:not(:disabled) {
+        color: var(--atlas-blue);
+        border-color: rgba(39, 199, 255, 0.46);
+        background: rgba(39, 199, 255, 0.035);
+    }
+
+    .atlas-connection-action.is-primary {
+        color: var(--atlas-blue);
+        border-color: rgba(39, 199, 255, 0.32);
+    }
+
+    .atlas-connection-action:disabled {
+        opacity: 0.42;
+        cursor: default;
+    }
+
+.atlas-connection-notice,
+.atlas-connection-error {
+    margin-top: 11px;
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
+}
+
+.atlas-connection-notice {
+    color: rgba(147, 255, 189, 0.66);
+}
+
+.atlas-connection-error {
+    color: rgba(255, 125, 125, 0.78);
+}
+
+.atlas-connections-footnote {
+    margin-top: 14px;
+    color: rgba(241, 238, 230, 0.25);
+    font-size: 8px;
+    line-height: 1.55;
+    letter-spacing: 0.07em;
+}
+
+
+/* =========================================
+   PASS 10D — MOMENT INPUT + CALENDAR IMPORT
+========================================= */
+
+.atlas-moment-add-menu {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin: 8px 0 10px;
+}
+
+    .atlas-moment-add-menu button {
+        appearance: none;
+        border: 1px solid rgba(141, 228, 255, 0.18);
+        border-radius: 2px;
+        padding: 7px 9px;
+        background: transparent;
+        color: rgba(141, 228, 255, 0.66);
+        font: inherit;
+        font-size: 9px;
+        letter-spacing: 0.09em;
+        cursor: pointer;
+    }
+
+        .atlas-moment-add-menu button:hover {
+            color: var(--atlas-blue);
+            border-color: rgba(39, 199, 255, 0.42);
+        }
+
+.atlas-calendar-importer {
+    margin: 10px 0 14px;
+    padding: 12px;
+    border: 1px solid rgba(39, 199, 255, 0.18);
+    background: rgba(3, 10, 17, 0.66);
+}
+
+.atlas-calendar-importer-heading {
+    margin-bottom: 12px;
+    color: var(--atlas-blue);
+    font-size: 9px;
+    letter-spacing: 0.13em;
+}
+
+.atlas-calendar-importer-field {
+    display: block;
+    margin-top: 10px;
+}
+
+    .atlas-calendar-importer-field > span,
+    .atlas-calendar-occurrences-header > span {
+        display: block;
+        margin-bottom: 5px;
+        color: rgba(241, 238, 230, 0.36);
+        font-size: 8px;
+        letter-spacing: 0.10em;
+    }
+
+    .atlas-calendar-importer-field select {
+        width: 100%;
+        border: 1px solid rgba(141, 228, 255, 0.14);
+        border-radius: 2px;
+        padding: 8px;
+        outline: none;
+        background: rgba(5, 13, 20, 0.92);
+        color: rgba(241, 238, 230, 0.78);
+        font: inherit;
+        font-size: 10px;
+    }
+
+.atlas-calendar-occurrences-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 13px;
+}
+
+    .atlas-calendar-occurrences-header > span {
+        margin-bottom: 0;
+    }
+
+    .atlas-calendar-occurrences-header button {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgba(141, 228, 255, 0.52);
+        font: inherit;
+        font-size: 8px;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+    }
+
+.atlas-calendar-occurrences {
+    max-height: 240px;
+    margin-top: 7px;
+    overflow-y: auto;
+    border-top: 1px solid rgba(141, 228, 255, 0.08);
+    border-bottom: 1px solid rgba(141, 228, 255, 0.08);
+}
+
+    .atlas-calendar-occurrences > button {
+        appearance: none;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-bottom: 1px solid rgba(141, 228, 255, 0.06);
+        padding: 8px 3px;
+        background: transparent;
+        color: rgba(241, 238, 230, 0.46);
+        font: inherit;
+        font-size: 9px;
+        line-height: 1.35;
+        text-align: left;
+        cursor: pointer;
+    }
+
+        .atlas-calendar-occurrences > button:last-child {
+            border-bottom: 0;
+        }
+
+        .atlas-calendar-occurrences > button.is-selected {
+            color: rgba(241, 238, 230, 0.86);
+            background: rgba(39, 199, 255, 0.025);
+        }
+
+.atlas-calendar-occurrence-check {
+    flex: 0 0 auto;
+    width: 13px;
+    color: var(--atlas-blue);
+}
+
+.atlas-calendar-import-primary,
+.atlas-calendar-import-cancel {
+    appearance: none;
+    margin-top: 11px;
+    border-radius: 2px;
+    padding: 7px 9px;
+    background: transparent;
+    font: inherit;
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    cursor: pointer;
+}
+
+.atlas-calendar-import-primary {
+    border: 1px solid rgba(39, 199, 255, 0.34);
+    color: var(--atlas-blue);
+}
+
+.atlas-calendar-import-cancel {
+    margin-left: 7px;
+    border: 1px solid rgba(141, 228, 255, 0.12);
+    color: rgba(141, 228, 255, 0.45);
+}
+
+    .atlas-calendar-import-primary:disabled,
+    .atlas-calendar-import-cancel:disabled {
+        opacity: 0.38;
+        cursor: default;
+    }
+
+.atlas-calendar-import-notice,
+.atlas-calendar-import-error {
+    margin-top: 9px;
+    font-size: 8px;
+    line-height: 1.45;
+    letter-spacing: 0.06em;
+}
+
+.atlas-calendar-import-notice {
+    color: rgba(147, 255, 189, 0.68);
+}
+
+.atlas-calendar-import-error {
+    color: rgba(255, 125, 125, 0.78);
+}
+
+
+/* =========================================
+   MOMENT BRICK TRAY — SIMPLE WRAPPED LAYOUT
+   -----------------------------------------
+   Mirrors Collections: neat wrapped chips.
+   Collapsed stays compact. MORE opens a
+   scrollable brick box for larger schedules.
+========================================= */
+
+.atlas-moment-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+    .atlas-moment-heading-row > span {
+        color: rgba(241, 238, 230, 0.42);
+        font-size: 10px;
+        letter-spacing: 0.17em;
+    }
+
+.atlas-moment-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.atlas-moment-add-fixed,
+.atlas-moment-tray-toggle {
+    appearance: none;
+    border: 1px solid rgba(141, 228, 255, 0.14);
+    background: transparent;
+    color: rgba(141, 228, 255, 0.58);
+    cursor: pointer;
+    transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.atlas-moment-add-fixed {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.atlas-moment-tray-toggle {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 7px;
+    letter-spacing: 0.1em;
+}
+
+    .atlas-moment-add-fixed:hover,
+    .atlas-moment-tray-toggle:hover,
+    .atlas-moment-add-fixed[aria-expanded="true"],
+    .atlas-moment-tray-toggle[aria-expanded="true"] {
+        color: var(--atlas-blue);
+        border-color: rgba(39, 199, 255, 0.42);
+        background: rgba(39, 199, 255, 0.035);
+    }
+
+.atlas-moment-brick-tray {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 7px;
+    width: 100%;
+    max-height: 72px;
+    overflow: hidden;
+    padding: 1px 0 2px;
+}
+
+    .atlas-moment-brick-tray.is-open {
+        max-height: 176px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding-right: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(39, 199, 255, 0.20) transparent;
+    }
+
+        .atlas-moment-brick-tray.is-open::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .atlas-moment-brick-tray.is-open::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .atlas-moment-brick-tray.is-open::-webkit-scrollbar-thumb {
+            background: rgba(39, 199, 255, 0.18);
+            border-radius: 999px;
+        }
+
+    .atlas-moment-brick-tray .atlas-moment-chip {
+        flex: 0 0 auto;
+    }
+
+@media (max-width: 680px) {
+    .atlas-moment-brick-tray {
+        max-height: 76px;
+    }
+
+        .atlas-moment-brick-tray.is-open {
+            max-height: 190px;
+            -webkit-overflow-scrolling: touch;
+        }
+}
+
+
+/* =========================================
+   MOMENT BRICK TRAY — ALWAYS EXPANDED
+   -----------------------------------------
+   Moments simply wrap like Collections.
+   The main Pin workspace handles scrolling.
+========================================= */
+
+.atlas-moment-tray-toggle {
+    display: none !important;
+}
+
+.atlas-moment-brick-tray,
+.atlas-moment-brick-tray.is-open {
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+    touch-action: auto !important;
+    scrollbar-width: auto !important;
+}
+
+    .atlas-moment-brick-tray::-webkit-scrollbar,
+    .atlas-moment-brick-tray.is-open::-webkit-scrollbar {
+        display: none;
+    }

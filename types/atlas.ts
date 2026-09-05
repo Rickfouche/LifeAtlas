@@ -12,6 +12,7 @@ export type AtlasTimeState =
 export type AtlasCollection = {
     id: string;
     name: string;
+    sortOrder: number;
 };
 
 
@@ -68,6 +69,11 @@ export type AtlasPlaceSearchResult = {
 };
 
 
+export type AtlasMomentSource =
+    | "manual"
+    | "google_calendar";
+
+
 export type AtlasPinMoment = {
     id: string;
     pin_id: string;
@@ -86,6 +92,23 @@ export type AtlasPinMoment = {
     notes: string | null;
 
     cover_media_id: string | null;
+
+    /*
+      Source describes where the Moment
+      originally entered Atlas.
+
+      Once created, every Moment remains a
+      normal Atlas Moment regardless of source.
+    */
+    source: AtlasMomentSource;
+
+    /*
+      Provider identity is nullable for manual
+      Moments and populated for Calendar imports.
+    */
+    external_event_id: string | null;
+    external_calendar_id: string | null;
+    external_series_id: string | null;
 
     metadata:
     Record<string, unknown>;

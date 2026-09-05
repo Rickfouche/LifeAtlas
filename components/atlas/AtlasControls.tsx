@@ -1,8 +1,10 @@
 "use client";
 
 import {
+    useEffect,
     useRef,
     useState,
+    type DragEvent,
     type KeyboardEvent,
 } from "react";
 
@@ -12,6 +14,13 @@ import type {
     AtlasPlaceSearchResult,
     AtlasWorldState,
 } from "@/types/atlas";
+
+type GoogleCalendarConnectionStatus = {
+    connected: boolean;
+    accountEmail: string | null;
+    connectedAt: string | null;
+    updatedAt: string | null;
+};
 
 /* =========================================
    PROPS
@@ -73,6 +82,10 @@ type AtlasControlsProps = {
         collectionId: string
     ) => Promise<void>;
 
+    onReorderCollections: (
+        orderedIds: string[]
+    ) => Promise<void>;
+
     selectedPlace:
     AtlasPlaceSearchResult | null;
 
@@ -104,6 +117,7 @@ export default function AtlasControls({
     onNavigateToPin,
     onRenameCollection,
     onDeleteCollection,
+    onReorderCollections,
     selectedPlace,
     onSelectPlace,
     onAddSelectedPlace,
@@ -116,6 +130,69 @@ export default function AtlasControls({
         drawerOpen,
         setDrawerOpen,
     ] = useState(false);
+
+    const [
+        activeDrawerView,
+        setActiveDrawerView,
+    ] = useState<
+        | "collections"
+        | "search"
+        | "connections"
+    >("collections");
+
+    const [
+        draggedCollectionId,
+        setDraggedCollectionId,
+    ] =
+        useState<string | null>(
+            null
+        );
+
+    const [
+        dragOverCollectionId,
+        setDragOverCollectionId,
+    ] =
+        useState<string | null>(
+            null
+        );
+
+    const [
+        isSavingCollectionOrder,
+        setIsSavingCollectionOrder,
+    ] = useState(false);
+
+    const [
+        collectionOrderError,
+        setCollectionOrderError,
+    ] = useState("");
+
+    const [
+        googleCalendarConnection,
+        setGoogleCalendarConnection,
+    ] =
+        useState<
+            GoogleCalendarConnectionStatus | null
+        >(null);
+
+    const [
+        isLoadingGoogleCalendarConnection,
+        setIsLoadingGoogleCalendarConnection,
+    ] = useState(true);
+
+    const [
+        isDisconnectingGoogleCalendar,
+        setIsDisconnectingGoogleCalendar,
+    ] = useState(false);
+
+    const [
+        googleCalendarConnectionError,
+        setGoogleCalendarConnectionError,
+    ] = useState("");
+
+    const [
+        googleCalendarConnectionNotice,
+        setGoogleCalendarConnectionNotice,
+    ] = useState("");
 
     const [
         isFutureMenuOpen,
@@ -791,6 +868,426 @@ export default function AtlasControls({
         };
 
     /* =========================================
+       GOOGLE CALENDAR CONNECTION
+    ========================================= */
+
+    async function loadGoogleCalendarConnection() {
+        setIsLoadingGoogleCalendarConnection(
+            true
+        );
+
+        setGoogleCalendarConnectionError(
+            ""
+        );
+
+        try {
+            const response =
+                await fetch(
+                    "/api/connections/google/calendar",
+                    {
+                        method: "GET",
+                        cache: "no-store",
+                    }
+                );
+
+            const payload =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "Could not load Google Calendar connection."
+                );
+            }
+
+            setGoogleCalendarConnection(
+                payload
+            );
+        } catch (error) {
+            console.error(
+                "Could not load Google Calendar connection:",
+                error
+            );
+
+            setGoogleCalendarConnection(
+                null
+            );
+
+            setGoogleCalendarConnectionError(
+                error instanceof Error
+                    ? error.message
+                    : "Could not load Google Calendar connection."
+            );
+        } finally {
+            setIsLoadingGoogleCalendarConnection(
+                false
+            );
+        }
+    }
+
+    function connectGoogleCalendar() {
+        setGoogleCalendarConnectionError(
+            ""
+        );
+
+        setGoogleCalendarConnectionNotice(
+            ""
+        );
+
+        window.location.assign(
+            "/api/connections/google/calendar/connect"
+        );
+    }
+
+    async function disconnectGoogleCalendar() {
+        if (
+            isDisconnectingGoogleCalendar
+        ) {
+            return;
+        }
+
+        setIsDisconnectingGoogleCalendar(
+            true
+        );
+
+        setGoogleCalendarConnectionError(
+            ""
+        );
+
+        setGoogleCalendarConnectionNotice(
+            ""
+        );
+
+        try {
+            const response =
+                await fetch(
+                    "/api/connections/google/calendar",
+                    {
+                        method: "DELETE",
+                    }
+                );
+
+            const payload =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "Could not disconnect Google Calendar."
+                );
+            }
+
+            setGoogleCalendarConnection({
+                connected: false,
+                accountEmail: null,
+                connectedAt: null,
+                updatedAt: null,
+            });
+
+            setGoogleCalendarConnectionNotice(
+                "GOOGLE CALENDAR DISCONNECTED"
+            );
+        } catch (error) {
+            console.error(
+                "Could not disconnect Google Calendar:",
+                error
+            );
+
+            setGoogleCalendarConnectionError(
+                error instanceof Error
+                    ? error.message
+                    : "Could not disconnect Google Calendar."
+            );
+        } finally {
+            setIsDisconnectingGoogleCalendar(
+                false
+            );
+        }
+    }
+
+    useEffect(() => {
+        void loadGoogleCalendarConnection();
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const oauthResult =
+            params.get(
+                "google_calendar"
+            );
+
+        if (!oauthResult) {
+            return;
+        }
+
+        setActiveDrawerView(
+            "connections"
+        );
+
+        setDrawerOpen(
+            true
+        );
+
+        if (
+            oauthResult ===
+            "connected"
+        ) {
+            setGoogleCalendarConnectionNotice(
+                "GOOGLE CALENDAR CONNECTED"
+            );
+        } else if (
+            oauthResult ===
+            "cancelled"
+        ) {
+            setGoogleCalendarConnectionNotice(
+                "CONNECTION CANCELLED"
+            );
+        } else {
+            setGoogleCalendarConnectionError(
+                "Google Calendar could not be connected."
+            );
+        }
+
+        params.delete(
+            "google_calendar"
+        );
+
+        const query =
+            params.toString();
+
+        window.history.replaceState(
+            {},
+            "",
+            `${window.location.pathname}${query
+                ? `?${query}`
+                : ""
+            }${window.location.hash}`
+        );
+
+        /*
+          The callback just changed server state.
+          Refresh the status after handling its signal.
+        */
+        void loadGoogleCalendarConnection();
+    }, []);
+
+
+    /* =========================================
+       EXPLORER NAVIGATION
+    ========================================= */
+
+    const openDrawerView =
+        (
+            view:
+                | "collections"
+                | "search"
+                | "connections"
+        ) => {
+            setActiveDrawerView(
+                view
+            );
+
+            setDrawerOpen(
+                true
+            );
+        };
+
+    const toggleCollectionsDrawer =
+        () => {
+            if (
+                drawerOpen &&
+                activeDrawerView ===
+                "collections"
+            ) {
+                setDrawerOpen(
+                    false
+                );
+
+                return;
+            }
+
+            openDrawerView(
+                "collections"
+            );
+        };
+
+    /* =========================================
+       COLLECTION REORDER
+    ========================================= */
+
+    const handleCollectionDragStart =
+        (
+            event:
+                DragEvent<HTMLDivElement>,
+            collectionId:
+                string
+        ) => {
+            if (
+                isSavingCollectionOrder
+            ) {
+                event.preventDefault();
+                return;
+            }
+
+            setDraggedCollectionId(
+                collectionId
+            );
+
+            setDragOverCollectionId(
+                collectionId
+            );
+
+            setCollectionOrderError(
+                ""
+            );
+
+            event.dataTransfer.effectAllowed =
+                "move";
+
+            event.dataTransfer.setData(
+                "text/plain",
+                collectionId
+            );
+        };
+
+    const handleCollectionDragOver =
+        (
+            event:
+                DragEvent<HTMLDivElement>,
+            collectionId:
+                string
+        ) => {
+            if (
+                !draggedCollectionId ||
+                draggedCollectionId ===
+                collectionId
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+
+            event.dataTransfer.dropEffect =
+                "move";
+
+            setDragOverCollectionId(
+                collectionId
+            );
+        };
+
+    const resetCollectionDrag =
+        () => {
+            setDraggedCollectionId(
+                null
+            );
+
+            setDragOverCollectionId(
+                null
+            );
+        };
+
+    const handleCollectionDrop =
+        async (
+            event:
+                DragEvent<HTMLDivElement>,
+            targetCollectionId:
+                string
+        ) => {
+            event.preventDefault();
+
+            const sourceCollectionId =
+                draggedCollectionId ||
+                event.dataTransfer.getData(
+                    "text/plain"
+                );
+
+            if (
+                !sourceCollectionId ||
+                sourceCollectionId ===
+                targetCollectionId ||
+                isSavingCollectionOrder
+            ) {
+                resetCollectionDrag();
+                return;
+            }
+
+            const currentIds =
+                collections.map(
+                    (collection) =>
+                        collection.id
+                );
+
+            const sourceIndex =
+                currentIds.indexOf(
+                    sourceCollectionId
+                );
+
+            const targetIndex =
+                currentIds.indexOf(
+                    targetCollectionId
+                );
+
+            if (
+                sourceIndex < 0 ||
+                targetIndex < 0
+            ) {
+                resetCollectionDrag();
+                return;
+            }
+
+            const nextIds =
+                [...currentIds];
+
+            const [
+                movedId,
+            ] =
+                nextIds.splice(
+                    sourceIndex,
+                    1
+                );
+
+            nextIds.splice(
+                targetIndex,
+                0,
+                movedId
+            );
+
+            setIsSavingCollectionOrder(
+                true
+            );
+
+            setCollectionOrderError(
+                ""
+            );
+
+            resetCollectionDrag();
+
+            try {
+                await onReorderCollections(
+                    nextIds
+                );
+            } catch (error) {
+                console.error(
+                    "Could not reorder Collections:",
+                    error
+                );
+
+                setCollectionOrderError(
+                    error instanceof Error
+                        ? error.message
+                        : "Could not save Collection order."
+                );
+            } finally {
+                setIsSavingCollectionOrder(
+                    false
+                );
+            }
+        };
+
+
+    /* =========================================
        COLLECTION STATE
     ========================================= */
 
@@ -975,7 +1472,7 @@ export default function AtlasControls({
             </nav>
 
             {/* =====================================
-          COLLECTION DRAWER
+          ATLAS EXPLORER
       ===================================== */}
 
             <aside
@@ -984,622 +1481,733 @@ export default function AtlasControls({
                     : ""
                     }`}
             >
-                {/* DRAWER TAB */}
+                {/* PERSISTENT EXPLORER RAIL */}
 
-                <button
-                    type="button"
-                    className="atlas-drawer-tab"
-                    onClick={() =>
-                        setDrawerOpen(
-                            (current) =>
-                                !current
-                        )
-                    }
-                    aria-expanded={
-                        drawerOpen
-                    }
-                    aria-label={
-                        drawerOpen
-                            ? "Close Atlas controls"
-                            : "Open Atlas controls"
-                    }
+                <div
+                    className="atlas-explorer-rail"
+                    aria-label="Atlas Explorer"
                 >
-                    <span className="atlas-tab-sigil">
-                        ◇
-                    </span>
-                </button>
+                    <button
+                        type="button"
+                        className={`atlas-explorer-rail-button atlas-explorer-rail-button--collections ${activeDrawerView ===
+                            "collections"
+                            ? "is-active"
+                            : ""
+                            }`}
+                        onClick={
+                            toggleCollectionsDrawer
+                        }
+                        aria-expanded={
+                            drawerOpen &&
+                            activeDrawerView ===
+                            "collections"
+                        }
+                        aria-label="Collections"
+                        title="Collections"
+                    >
+                        <span
+                            className="atlas-tab-sigil"
+                            aria-hidden="true"
+                        >
+                            ◇
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`atlas-explorer-rail-button ${activeDrawerView ===
+                            "search"
+                            ? "is-active"
+                            : ""
+                            }`}
+                        onClick={() =>
+                            openDrawerView(
+                                "search"
+                            )
+                        }
+                        aria-expanded={
+                            drawerOpen &&
+                            activeDrawerView ===
+                            "search"
+                        }
+                        aria-label="Search"
+                        title="Search"
+                    >
+                        <span
+                            className="atlas-explorer-search-sigil"
+                            aria-hidden="true"
+                        >
+                            ⌕
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`atlas-explorer-rail-button ${activeDrawerView ===
+                            "connections"
+                            ? "is-active"
+                            : ""
+                            }`}
+                        onClick={() =>
+                            openDrawerView(
+                                "connections"
+                            )
+                        }
+                        aria-expanded={
+                            drawerOpen &&
+                            activeDrawerView ===
+                            "connections"
+                        }
+                        aria-label="Connections"
+                        title="Connections"
+                    >
+                        <span
+                            className="atlas-explorer-connection-sigil"
+                            aria-hidden="true"
+                        >
+                            ◎
+                        </span>
+                    </button>
+                </div>
 
                 {/* DRAWER CONTENT */}
 
                 <div className="atlas-drawer-content">
-                    <div className="atlas-drawer-heading">
-                        COLLECTIONS
-                    </div>
+                    {activeDrawerView ===
+                        "collections" ? (
+                        <>
+                            <div className="atlas-drawer-heading">
+                                COLLECTIONS
+                            </div>
 
-                    {/* =================================
-              PLACE SEARCH
-          ================================= */}
+                            <div className="atlas-collection-list">
+                                {/* ALL COLLECTIONS */}
 
-                    <div className="atlas-place-search">
-                        <div className="atlas-place-search-label">
-                            PLACE SEARCH
-                        </div>
-
-                        <div className="atlas-place-search-input-wrap">
-                            <input
-                                type="search"
-                                value={
-                                    placeQuery
-                                }
-                                onChange={(
-                                    event
-                                ) => {
-                                    setPlaceQuery(
-                                        event.target.value
-                                    );
-
-                                    setIsPlaceSearchOpen(
-                                        true
-                                    );
-                                }}
-                                onFocus={() =>
-                                    setIsPlaceSearchOpen(
-                                        true
-                                    )
-                                }
-                                onKeyDown={
-                                    handlePlaceSearchKeyDown
-                                }
-                                placeholder="Search a place..."
-                                aria-label="Search Google Places"
-                            />
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    void searchPlaces()
-                                }
-                                disabled={
-                                    isSearchingPlaces ||
-                                    placeQuery.trim()
-                                        .length < 2
-                                }
-                                aria-label="Search place"
-                            >
-                                {isSearchingPlaces
-                                    ? "..."
-                                    : "↗"}
-                            </button>
-                        </div>
-
-                        {selectedPlace && (
-                            <button
-                                type="button"
-                                className="atlas-place-selected"
-                                onClick={() =>
-                                    setIsPlaceSearchOpen(
-                                        true
-                                    )
-                                }
-                                title="Selected Google place"
-                            >
-                                <span>
-                                    {
-                                        selectedPlace.name
+                                <button
+                                    type="button"
+                                    className={
+                                        allCollectionsActive
+                                            ? "is-active"
+                                            : ""
                                     }
-                                </span>
-
-                                <small>
-                                    {
-                                        selectedPlace.formattedAddress
+                                    onClick={
+                                        onClearCollections
                                     }
-                                </small>
-                            </button>
-                        )}
+                                    aria-pressed={
+                                        allCollectionsActive
+                                    }
+                                >
+                                    ALL
+                                </button>
 
-                        {isPlaceSearchOpen && (
-                            <div className="atlas-place-results">
-                                {isSearchingPlaces ? (
-                                    <div className="atlas-place-results-state">
-                                        SEARCHING...
-                                    </div>
-                                ) : placeSearchError ? (
-                                    <div className="atlas-place-results-state is-error">
-                                        {
-                                            placeSearchError
-                                        }
-                                    </div>
-                                ) : placeResults.length > 0 ? (
-                                    placeResults.map(
-                                        (place) => (
-                                            <button
+                                {/* SAVED COLLECTIONS */}
+
+                                {collections.map(
+                                    (collection) => {
+                                        const isSelected =
+                                            selectedCollectionIds.includes(
+                                                collection.id
+                                            );
+
+                                        const isExpanded =
+                                            expandedCollectionIds.includes(
+                                                collection.id
+                                            );
+
+                                        const isManaging =
+                                            managingCollectionId ===
+                                            collection.id;
+
+                                        const isRenamingThis =
+                                            renamingCollectionId ===
+                                            collection.id;
+
+                                        const isDraggingThis =
+                                            draggedCollectionId ===
+                                            collection.id;
+
+                                        const isDragTarget =
+                                            dragOverCollectionId ===
+                                            collection.id &&
+                                            draggedCollectionId !==
+                                            collection.id;
+
+                                        const collectionPins =
+                                            pins.filter(
+                                                (pin) =>
+                                                    pin.collectionIds.includes(
+                                                        collection.id
+                                                    )
+                                            );
+
+                                        return (
+                                            <div
                                                 key={
-                                                    place.id
+                                                    collection.id
                                                 }
-                                                type="button"
-                                                className={
-                                                    selectedPlace?.id ===
-                                                        place.id
-                                                        ? "is-selected"
+                                                className={`atlas-collection-row ${isDraggingThis
+                                                    ? "is-dragging"
+                                                    : ""
+                                                    } ${isDragTarget
+                                                        ? "is-drag-target"
                                                         : ""
+                                                    }`}
+                                                draggable={
+                                                    !isRenamingThis &&
+                                                    !isSavingCollectionOrder
                                                 }
-                                                onClick={() =>
-                                                    handleChoosePlace(
-                                                        place
+                                                onDragStart={(
+                                                    event
+                                                ) =>
+                                                    handleCollectionDragStart(
+                                                        event,
+                                                        collection.id
                                                     )
                                                 }
+                                                onDragOver={(
+                                                    event
+                                                ) =>
+                                                    handleCollectionDragOver(
+                                                        event,
+                                                        collection.id
+                                                    )
+                                                }
+                                                onDrop={(
+                                                    event
+                                                ) =>
+                                                    void handleCollectionDrop(
+                                                        event,
+                                                        collection.id
+                                                    )
+                                                }
+                                                onDragEnd={
+                                                    resetCollectionDrag
+                                                }
                                             >
-                                                <span>
-                                                    {
-                                                        place.name
-                                                    }
-                                                </span>
+                                                <div className="atlas-collection-row-main">
+                                                    <button
+                                                        type="button"
+                                                        className="atlas-collection-drag-handle"
+                                                        aria-label={`Drag ${collection.name} to reorder`}
+                                                        title="Drag to reorder"
+                                                        tabIndex={
+                                                            -1
+                                                        }
+                                                    >
+                                                        ⋮⋮
+                                                    </button>
 
-                                                <small>
-                                                    {
-                                                        place.formattedAddress
-                                                    }
-                                                </small>
-                                            </button>
-                                        )
-                                    )
-                                ) : placeQuery.trim()
-                                    .length >= 2 ? (
-                                    <div className="atlas-place-results-state">
-                                        PRESS ENTER TO SEARCH
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleCollectionExpanded(
+                                                                collection.id
+                                                            )
+                                                        }
+                                                        aria-expanded={
+                                                            isExpanded
+                                                        }
+                                                        aria-label={`${isExpanded ? "Collapse" : "Expand"} ${collection.name}`}
+                                                        className="atlas-collection-expand"
+                                                    >
+                                                        {isExpanded
+                                                            ? "⌄"
+                                                            : "›"}
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className={
+                                                            isSelected
+                                                                ? "is-active atlas-collection-name"
+                                                                : "atlas-collection-name"
+                                                        }
+                                                        onClick={() =>
+                                                            onToggleCollection(
+                                                                collection.id
+                                                            )
+                                                        }
+                                                        aria-pressed={
+                                                            isSelected
+                                                        }
+                                                    >
+                                                        {collection.name.toUpperCase()}
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openCollectionManagement(
+                                                                collection.id
+                                                            )
+                                                        }
+                                                        aria-expanded={
+                                                            isManaging
+                                                        }
+                                                        aria-label={`Manage ${collection.name}`}
+                                                        className="atlas-collection-manage"
+                                                    >
+                                                        ···
+                                                    </button>
+                                                </div>
+
+                                                {isExpanded && (
+                                                    <div className="atlas-collection-pins">
+                                                        {collectionPins.length ===
+                                                            0 ? (
+                                                            <div className="atlas-collection-empty">
+                                                                NO PINS
+                                                            </div>
+                                                        ) : (
+                                                            collectionPins.map(
+                                                                (pin) => (
+                                                                    <button
+                                                                        key={
+                                                                            pin.id
+                                                                        }
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            onNavigateToPin(
+                                                                                pin
+                                                                            )
+                                                                        }
+                                                                        title={`Go to ${pin.title}`}
+                                                                        className="atlas-collection-pin"
+                                                                    >
+                                                                        ↳ {pin.title.toUpperCase()}
+                                                                    </button>
+                                                                )
+                                                            )
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {isManaging && (
+                                                    <div className="atlas-collection-management">
+                                                        {isRenamingThis ? (
+                                                            <>
+                                                                <input
+                                                                    type="text"
+                                                                    value={
+                                                                        collectionRenameValue
+                                                                    }
+                                                                    onChange={(
+                                                                        event
+                                                                    ) =>
+                                                                        setCollectionRenameValue(
+                                                                            event.target.value
+                                                                        )
+                                                                    }
+                                                                    onKeyDown={(
+                                                                        event
+                                                                    ) => {
+                                                                        if (
+                                                                            event.key ===
+                                                                            "Enter"
+                                                                        ) {
+                                                                            event.preventDefault();
+
+                                                                            void saveRenameCollection(
+                                                                                collection.id
+                                                                            );
+                                                                        }
+
+                                                                        if (
+                                                                            event.key ===
+                                                                            "Escape"
+                                                                        ) {
+                                                                            event.preventDefault();
+
+                                                                            cancelRenameCollection();
+                                                                        }
+                                                                    }}
+                                                                    aria-label={`Rename ${collection.name}`}
+                                                                    autoFocus
+                                                                />
+
+                                                                <div className="atlas-new-collection-actions">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            void saveRenameCollection(
+                                                                                collection.id
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            isRenamingCollection ||
+                                                                            !collectionRenameValue.trim()
+                                                                        }
+                                                                    >
+                                                                        {isRenamingCollection
+                                                                            ? "SAVING..."
+                                                                            : "SAVE"}
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={
+                                                                            cancelRenameCollection
+                                                                        }
+                                                                        disabled={
+                                                                            isRenamingCollection
+                                                                        }
+                                                                    >
+                                                                        CANCEL
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="atlas-collection-management-actions">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        startRenameCollection(
+                                                                            collection
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    RENAME
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        void deleteCollection(
+                                                                            collection
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        deletingCollectionId ===
+                                                                        collection.id
+                                                                    }
+                                                                >
+                                                                    {deletingCollectionId ===
+                                                                        collection.id
+                                                                        ? "DELETING..."
+                                                                        : "DELETE"}
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {collectionManageError && (
+                                                            <div className="atlas-collection-error">
+                                                                {collectionManageError}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                )}
+
+                                {collectionOrderError && (
+                                    <div className="atlas-collection-error">
+                                        {
+                                            collectionOrderError
+                                        }
                                     </div>
-                                ) : (
-                                    <div className="atlas-place-results-state">
-                                        TYPE TO SEARCH
+                                )}
+
+                                {!isCreatingCollection && (
+                                    <button
+                                        type="button"
+                                        className="atlas-new-collection"
+                                        onClick={
+                                            handleOpenNewCollection
+                                        }
+                                    >
+                                        + NEW COLLECTION
+                                    </button>
+                                )}
+
+                                {isCreatingCollection && (
+                                    <div className="atlas-new-collection-form">
+                                        <input
+                                            type="text"
+                                            value={
+                                                newCollectionName
+                                            }
+                                            onChange={(
+                                                event
+                                            ) =>
+                                                setNewCollectionName(
+                                                    event.target.value
+                                                )
+                                            }
+                                            onKeyDown={
+                                                handleCollectionKeyDown
+                                            }
+                                            placeholder="COLLECTION NAME"
+                                            aria-label="New collection name"
+                                            autoFocus
+                                        />
+
+                                        <div className="atlas-new-collection-actions">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    void handleCreateCollection()
+                                                }
+                                                disabled={
+                                                    isSavingCollection ||
+                                                    !newCollectionName.trim()
+                                                }
+                                            >
+                                                {isSavingCollection
+                                                    ? "SAVING..."
+                                                    : "CREATE"}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={
+                                                    handleCancelNewCollection
+                                                }
+                                                disabled={
+                                                    isSavingCollection
+                                                }
+                                            >
+                                                CANCEL
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        </>
+                    ) : activeDrawerView ===
+                        "search" ? (
+                        <>
+                            <div className="atlas-drawer-heading">
+                                SEARCH
+                            </div>
 
-                    {/* =================================
-              COLLECTION LIST
-          ================================= */}
+                            <div className="atlas-place-search atlas-place-search--explorer">
+                                <div className="atlas-place-search-label">
+                                    PLACE SEARCH
+                                </div>
 
-                    <div className="atlas-collection-list">
-                        {/* ALL COLLECTIONS */}
-
-                        <button
-                            type="button"
-                            className={
-                                allCollectionsActive
-                                    ? "is-active"
-                                    : ""
-                            }
-                            onClick={
-                                onClearCollections
-                            }
-                            aria-pressed={
-                                allCollectionsActive
-                            }
-                        >
-                            ALL
-                        </button>
-
-                        {/* SAVED COLLECTIONS */}
-
-                        {collections.map(
-                            (collection) => {
-                                const isSelected =
-                                    selectedCollectionIds.includes(
-                                        collection.id
-                                    );
-
-                                const isExpanded =
-                                    expandedCollectionIds.includes(
-                                        collection.id
-                                    );
-
-                                const isManaging =
-                                    managingCollectionId ===
-                                    collection.id;
-
-                                const isRenamingThis =
-                                    renamingCollectionId ===
-                                    collection.id;
-
-                                const collectionPins =
-                                    pins.filter(
-                                        (pin) =>
-                                            pin.collectionIds.includes(
-                                                collection.id
-                                            )
-                                    );
-
-                                return (
-                                    <div
-                                        key={
-                                            collection.id
+                                <div className="atlas-place-search-input-wrap">
+                                    <input
+                                        type="search"
+                                        value={
+                                            placeQuery
                                         }
-                                        style={{
-                                            width:
-                                                "100%",
+                                        onChange={(
+                                            event
+                                        ) => {
+                                            setPlaceQuery(
+                                                event.target.value
+                                            );
+
+                                            setIsPlaceSearchOpen(
+                                                true
+                                            );
                                         }}
-                                    >
-                                        <div
-                                            style={{
-                                                display:
-                                                    "grid",
-                                                gridTemplateColumns:
-                                                    "26px minmax(0, 1fr) 28px",
-                                                gap:
-                                                    "4px",
-                                                alignItems:
-                                                    "center",
-                                            }}
-                                        >
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    toggleCollectionExpanded(
-                                                        collection.id
-                                                    )
-                                                }
-                                                aria-expanded={
-                                                    isExpanded
-                                                }
-                                                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${collection.name}`}
-                                                style={{
-                                                    minWidth:
-                                                        0,
-                                                    padding:
-                                                        "0",
-                                                }}
-                                            >
-                                                {isExpanded
-                                                    ? "⌄"
-                                                    : "›"}
-                                            </button>
+                                        onFocus={() =>
+                                            setIsPlaceSearchOpen(
+                                                true
+                                            )
+                                        }
+                                        onKeyDown={
+                                            handlePlaceSearchKeyDown
+                                        }
+                                        placeholder="Search a place..."
+                                        aria-label="Search Google Places"
+                                    />
 
-                                            <button
-                                                type="button"
-                                                className={
-                                                    isSelected
-                                                        ? "is-active"
-                                                        : ""
-                                                }
-                                                onClick={() =>
-                                                    onToggleCollection(
-                                                        collection.id
-                                                    )
-                                                }
-                                                aria-pressed={
-                                                    isSelected
-                                                }
-                                                style={{
-                                                    minWidth:
-                                                        0,
-                                                    textAlign:
-                                                        "left",
-                                                    overflow:
-                                                        "hidden",
-                                                    textOverflow:
-                                                        "ellipsis",
-                                                    whiteSpace:
-                                                        "nowrap",
-                                                }}
-                                            >
-                                                {collection.name.toUpperCase()}
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    openCollectionManagement(
-                                                        collection.id
-                                                    )
-                                                }
-                                                aria-expanded={
-                                                    isManaging
-                                                }
-                                                aria-label={`Manage ${collection.name}`}
-                                                style={{
-                                                    minWidth:
-                                                        0,
-                                                    padding:
-                                                        "0",
-                                                    letterSpacing:
-                                                        "1px",
-                                                }}
-                                            >
-                                                ···
-                                            </button>
-                                        </div>
-
-                                        {isExpanded && (
-                                            <div
-                                                style={{
-                                                    padding:
-                                                        "4px 0 8px 30px",
-                                                }}
-                                            >
-                                                {collectionPins.length ===
-                                                    0 ? (
-                                                    <div
-                                                        style={{
-                                                            opacity:
-                                                                0.45,
-                                                            padding:
-                                                                "6px 4px",
-                                                            fontSize:
-                                                                "10px",
-                                                            letterSpacing:
-                                                                "0.08em",
-                                                        }}
-                                                    >
-                                                        NO PINS
-                                                    </div>
-                                                ) : (
-                                                    collectionPins.map(
-                                                        (pin) => (
-                                                            <button
-                                                                key={
-                                                                    pin.id
-                                                                }
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    onNavigateToPin(
-                                                                        pin
-                                                                    )
-                                                                }
-                                                                title={`Go to ${pin.title}`}
-                                                                style={{
-                                                                    display:
-                                                                        "block",
-                                                                    width:
-                                                                        "100%",
-                                                                    textAlign:
-                                                                        "left",
-                                                                    padding:
-                                                                        "7px 8px",
-                                                                    opacity:
-                                                                        0.78,
-                                                                    fontSize:
-                                                                        "10px",
-                                                                    letterSpacing:
-                                                                        "0.08em",
-                                                                    overflow:
-                                                                        "hidden",
-                                                                    textOverflow:
-                                                                        "ellipsis",
-                                                                    whiteSpace:
-                                                                        "nowrap",
-                                                                }}
-                                                            >
-                                                                ↳ {pin.title.toUpperCase()}
-                                                            </button>
-                                                        )
-                                                    )
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {isManaging && (
-                                            <div
-                                                style={{
-                                                    margin:
-                                                        "5px 0 9px 30px",
-                                                    padding:
-                                                        "8px",
-                                                    border:
-                                                        "1px solid rgba(141, 228, 255, 0.14)",
-                                                    background:
-                                                        "rgba(3, 10, 17, 0.58)",
-                                                }}
-                                            >
-                                                {isRenamingThis ? (
-                                                    <>
-                                                        <input
-                                                            type="text"
-                                                            value={
-                                                                collectionRenameValue
-                                                            }
-                                                            onChange={(
-                                                                event
-                                                            ) =>
-                                                                setCollectionRenameValue(
-                                                                    event.target.value
-                                                                )
-                                                            }
-                                                            onKeyDown={(
-                                                                event
-                                                            ) => {
-                                                                if (
-                                                                    event.key ===
-                                                                    "Enter"
-                                                                ) {
-                                                                    event.preventDefault();
-
-                                                                    void saveRenameCollection(
-                                                                        collection.id
-                                                                    );
-                                                                }
-
-                                                                if (
-                                                                    event.key ===
-                                                                    "Escape"
-                                                                ) {
-                                                                    event.preventDefault();
-
-                                                                    cancelRenameCollection();
-                                                                }
-                                                            }}
-                                                            aria-label={`Rename ${collection.name}`}
-                                                            autoFocus
-                                                        />
-
-                                                        <div className="atlas-new-collection-actions">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    void saveRenameCollection(
-                                                                        collection.id
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    isRenamingCollection ||
-                                                                    !collectionRenameValue.trim()
-                                                                }
-                                                            >
-                                                                {isRenamingCollection
-                                                                    ? "SAVING..."
-                                                                    : "SAVE"}
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={
-                                                                    cancelRenameCollection
-                                                                }
-                                                                disabled={
-                                                                    isRenamingCollection
-                                                                }
-                                                            >
-                                                                CANCEL
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div
-                                                        style={{
-                                                            display:
-                                                                "flex",
-                                                            gap:
-                                                                "6px",
-                                                            flexWrap:
-                                                                "wrap",
-                                                        }}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                startRenameCollection(
-                                                                    collection
-                                                                )
-                                                            }
-                                                        >
-                                                            RENAME
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                void deleteCollection(
-                                                                    collection
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                deletingCollectionId ===
-                                                                collection.id
-                                                            }
-                                                        >
-                                                            {deletingCollectionId ===
-                                                                collection.id
-                                                                ? "DELETING..."
-                                                                : "DELETE"}
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {collectionManageError && (
-                                                    <div
-                                                        style={{
-                                                            marginTop:
-                                                                "7px",
-                                                            fontSize:
-                                                                "10px",
-                                                            opacity:
-                                                                0.72,
-                                                        }}
-                                                    >
-                                                        {collectionManageError}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            }
-                        )}
-
-                        {/* =================================
-                NEW COLLECTION BUTTON
-            ================================= */}
-
-                        {!isCreatingCollection && (
-                            <button
-                                type="button"
-                                className="atlas-new-collection"
-                                onClick={
-                                    handleOpenNewCollection
-                                }
-                            >
-                                + NEW COLLECTION
-                            </button>
-                        )}
-
-                        {/* =================================
-                NEW COLLECTION FORM
-            ================================= */}
-
-                        {isCreatingCollection && (
-                            <div className="atlas-new-collection-form">
-                                <input
-                                    type="text"
-                                    value={
-                                        newCollectionName
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setNewCollectionName(
-                                            event.target.value
-                                        )
-                                    }
-                                    onKeyDown={
-                                        handleCollectionKeyDown
-                                    }
-                                    placeholder="COLLECTION NAME"
-                                    aria-label="New collection name"
-                                    autoFocus
-                                />
-
-                                <div className="atlas-new-collection-actions">
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            void handleCreateCollection()
+                                            void searchPlaces()
                                         }
                                         disabled={
-                                            isSavingCollection ||
-                                            !newCollectionName.trim()
+                                            isSearchingPlaces ||
+                                            placeQuery.trim()
+                                                .length < 2
                                         }
+                                        aria-label="Search place"
                                     >
-                                        {isSavingCollection
-                                            ? "SAVING..."
-                                            : "CREATE"}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            handleCancelNewCollection
-                                        }
-                                        disabled={
-                                            isSavingCollection
-                                        }
-                                    >
-                                        CANCEL
+                                        {isSearchingPlaces
+                                            ? "..."
+                                            : "↗"}
                                     </button>
                                 </div>
+
+                                {selectedPlace && (
+                                    <button
+                                        type="button"
+                                        className="atlas-place-selected"
+                                        onClick={() =>
+                                            setIsPlaceSearchOpen(
+                                                true
+                                            )
+                                        }
+                                        title="Selected Google place"
+                                    >
+                                        <span>
+                                            {
+                                                selectedPlace.name
+                                            }
+                                        </span>
+
+                                        <small>
+                                            {
+                                                selectedPlace.formattedAddress
+                                            }
+                                        </small>
+                                    </button>
+                                )}
+
+                                {isPlaceSearchOpen && (
+                                    <div className="atlas-place-results">
+                                        {isSearchingPlaces ? (
+                                            <div className="atlas-place-results-state">
+                                                SEARCHING...
+                                            </div>
+                                        ) : placeSearchError ? (
+                                            <div className="atlas-place-results-state is-error">
+                                                {
+                                                    placeSearchError
+                                                }
+                                            </div>
+                                        ) : placeResults.length > 0 ? (
+                                            placeResults.map(
+                                                (place) => (
+                                                    <button
+                                                        key={
+                                                            place.id
+                                                        }
+                                                        type="button"
+                                                        className={
+                                                            selectedPlace?.id ===
+                                                                place.id
+                                                                ? "is-selected"
+                                                                : ""
+                                                        }
+                                                        onClick={() =>
+                                                            handleChoosePlace(
+                                                                place
+                                                            )
+                                                        }
+                                                    >
+                                                        <span>
+                                                            {
+                                                                place.name
+                                                            }
+                                                        </span>
+
+                                                        <small>
+                                                            {
+                                                                place.formattedAddress
+                                                            }
+                                                        </small>
+                                                    </button>
+                                                )
+                                            )
+                                        ) : placeQuery.trim()
+                                            .length >= 2 ? (
+                                            <div className="atlas-place-results-state">
+                                                PRESS ENTER TO SEARCH
+                                            </div>
+                                        ) : (
+                                            <div className="atlas-place-results-state">
+                                                TYPE TO SEARCH
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="atlas-drawer-heading">
+                                CONNECTIONS
+                            </div>
+
+                            <div className="atlas-connections-list">
+                                <section className="atlas-connection-card">
+                                    <div className="atlas-connection-provider">
+                                        GOOGLE CALENDAR
+                                    </div>
+
+                                    {isLoadingGoogleCalendarConnection ? (
+                                        <div className="atlas-connection-status">
+                                            CHECKING CONNECTION...
+                                        </div>
+                                    ) : googleCalendarConnection
+                                        ?.connected ? (
+                                        <>
+                                            <div className="atlas-connection-status is-connected">
+                                                CONNECTED
+                                            </div>
+
+                                            {googleCalendarConnection
+                                                .accountEmail && (
+                                                    <div className="atlas-connection-account">
+                                                        {
+                                                            googleCalendarConnection
+                                                                .accountEmail
+                                                        }
+                                                    </div>
+                                                )}
+
+                                            <button
+                                                type="button"
+                                                className="atlas-connection-action"
+                                                onClick={() =>
+                                                    void disconnectGoogleCalendar()
+                                                }
+                                                disabled={
+                                                    isDisconnectingGoogleCalendar
+                                                }
+                                            >
+                                                {isDisconnectingGoogleCalendar
+                                                    ? "DISCONNECTING..."
+                                                    : "DISCONNECT"}
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="atlas-connection-status">
+                                                NOT CONNECTED
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                className="atlas-connection-action is-primary"
+                                                onClick={
+                                                    connectGoogleCalendar
+                                                }
+                                            >
+                                                CONNECT GOOGLE
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {googleCalendarConnectionNotice && (
+                                        <div className="atlas-connection-notice">
+                                            {
+                                                googleCalendarConnectionNotice
+                                            }
+                                        </div>
+                                    )}
+
+                                    {googleCalendarConnectionError && (
+                                        <div className="atlas-connection-error">
+                                            {
+                                                googleCalendarConnectionError
+                                            }
+                                        </div>
+                                    )}
+                                </section>
+
+                                <div className="atlas-connections-footnote">
+                                    CONNECTION ONLY. CALENDAR EVENTS ARE NOT IMPORTED UNTIL YOU CHOOSE THEM FROM A PIN.
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </aside>
         </>

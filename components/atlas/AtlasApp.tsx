@@ -1085,7 +1085,13 @@ export default function AtlasApp({
                         "collections"
                     )
                     .select(
-                        "id, name"
+                        "id, name, sort_order"
+                    )
+                    .order(
+                        "sort_order",
+                        {
+                            ascending: true,
+                        }
                     )
                     .order(
                         "created_at",
@@ -1115,6 +1121,9 @@ export default function AtlasApp({
 
                                 name:
                                     collection.name,
+
+                                sortOrder:
+                                    collection.sort_order,
                             })
                         )
                     );
@@ -1356,6 +1365,11 @@ export default function AtlasApp({
             end_at,
             timezone,
             notes,
+            cover_media_id,
+            source,
+            external_event_id,
+            external_calendar_id,
+            external_series_id,
             metadata,
             created_at,
             updated_at
@@ -1746,6 +1760,16 @@ export default function AtlasApp({
                SAVE COLLECTION
             ------------------------------------- */
 
+            const nextSortOrder =
+                collections.length === 0
+                    ? 0
+                    : Math.max(
+                        ...collections.map(
+                            (collection) =>
+                                collection.sortOrder
+                        )
+                    ) + 1;
+
             const {
                 data:
                 savedCollection,
@@ -1761,9 +1785,12 @@ export default function AtlasApp({
 
                     name:
                         trimmedName,
+
+                    sort_order:
+                        nextSortOrder,
                 })
                 .select(
-                    "id, name"
+                    "id, name, sort_order"
                 )
                 .single();
 
@@ -1786,6 +1813,9 @@ export default function AtlasApp({
 
                 name:
                     savedCollection.name,
+
+                sortOrder:
+                    savedCollection.sort_order,
             };
 
             setCollections(
@@ -1845,7 +1875,7 @@ export default function AtlasApp({
                     collectionId
                 )
                 .select(
-                    "id, name"
+                    "id, name, sort_order"
                 )
                 .single();
 
@@ -1874,11 +1904,132 @@ export default function AtlasApp({
                                         updatedCollection.id,
                                     name:
                                         updatedCollection.name,
+
+                                    sortOrder:
+                                        updatedCollection.sort_order,
                                 }
                                 : collection
                     )
             );
         };
+
+    /* =========================================
+       REORDER COLLECTIONS
+
+       The left Explorer owns the gesture.
+       AtlasApp persists the resulting order.
+    ========================================= */
+
+    const handleReorderCollections =
+        async (
+            orderedIds: string[]
+        ) => {
+            const previousCollections =
+                collections;
+
+            const collectionById =
+                new Map(
+                    collections.map(
+                        (collection) => [
+                            collection.id,
+                            collection,
+                        ]
+                    )
+                );
+
+            const reordered =
+                orderedIds
+                    .map(
+                        (id, index) => {
+                            const collection =
+                                collectionById.get(
+                                    id
+                                );
+
+                            if (!collection) {
+                                return null;
+                            }
+
+                            return {
+                                ...collection,
+                                sortOrder:
+                                    index,
+                            };
+                        }
+                    )
+                    .filter(
+                        (
+                            collection
+                        ): collection is
+                            AtlasCollection =>
+                            collection !==
+                            null
+                    );
+
+            /*
+              Guard against an incomplete drag result.
+            */
+            if (
+                reordered.length !==
+                collections.length
+            ) {
+                return;
+            }
+
+            setCollections(
+                reordered
+            );
+
+            try {
+                const updates =
+                    reordered.map(
+                        (collection) =>
+                            supabase
+                                .from(
+                                    "collections"
+                                )
+                                .update({
+                                    sort_order:
+                                        collection.sortOrder,
+                                })
+                                .eq(
+                                    "id",
+                                    collection.id
+                                )
+                    );
+
+                const results =
+                    await Promise.all(
+                        updates
+                    );
+
+                const failed =
+                    results.find(
+                        (result) =>
+                            result.error
+                    );
+
+                if (
+                    failed?.error
+                ) {
+                    throw failed.error;
+                }
+            } catch (error) {
+                console.error(
+                    "Could not reorder Collections:",
+                    error
+                );
+
+                setCollections(
+                    previousCollections
+                );
+
+                throw new Error(
+                    "Could not save Collection order."
+                );
+            }
+        };
+
 
     /* =========================================
        DELETE COLLECTION
@@ -3304,8 +3455,8 @@ export default function AtlasApp({
 
             <div
                 className={`atlas-day-night-toggle ${worldState === "all"
-                        ? "is-hidden-in-all"
-                        : ""
+                    ? "is-hidden-in-all"
+                    : ""
                     }`}
                 role="group"
                 aria-label="Atlas time of day"
@@ -3469,6 +3620,10 @@ export default function AtlasApp({
 
                 onDeleteCollection={
                     handleDeleteCollection
+                }
+
+                onReorderCollections={
+                    handleReorderCollections
                 }
 
                 selectedPlace={
