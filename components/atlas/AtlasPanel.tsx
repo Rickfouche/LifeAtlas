@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { uploadMediaDirect } from "@/lib/directMediaUpload";
 import CalendarMomentImporter from "@/components/atlas/CalendarMomentImporter";
 
 import type {
@@ -4910,85 +4911,71 @@ export default function AtlasPanel({
                 return;
             }
 
-            setIsUploading(true);
-            setMediaError("");
+            setIsUploading(
+                true
+            );
+
+            setMediaError(
+                ""
+            );
 
             try {
-                const formData =
-                    new FormData();
-
-                formData.append(
-                    "file",
-                    file
-                );
-
-                formData.append(
-                    "pinId",
-                    selectedPin.id
-                );
-
-                const response =
-                    await fetch(
-                        "/api/media/upload",
-                        {
-                            method: "POST",
-                            body: formData,
-                        }
-                    );
-
                 const result =
-                    await response.json();
+                    await uploadMediaDirect({
+                        file,
 
-                if (!response.ok) {
-                    setMediaError(
-                        result.error ??
-                        "Upload failed."
-                    );
-                    return;
-                }
+                        pinId:
+                            selectedPin.id,
+
+                        folderId:
+                            targetFolderId,
+                    });
 
                 let uploaded:
                     AtlasMedia = {
                     ...result.media,
+
                     moment_id:
                         result.media
                             .moment_id ??
                         null,
+
                     folder_id:
                         result.media
                             .folder_id ??
                         null,
+
                     url:
                         result.media.url,
                 };
 
+                /*
+                  Folder placement is already handled
+                  by the V2 prepare + complete flow.
+
+                  Moment attachment remains on the
+                  existing Atlas media PATCH route.
+                */
+
                 if (
-                    creationMomentId ||
-                    targetFolderId
+                    creationMomentId
                 ) {
                     const attachResponse =
                         await fetch(
                             `/api/media/${uploaded.id}`,
                             {
-                                method: "PATCH",
+                                method:
+                                    "PATCH",
+
                                 headers: {
                                     "Content-Type":
                                         "application/json",
                                 },
+
                                 body:
                                     JSON.stringify({
-                                        ...(creationMomentId
-                                            ? {
-                                                momentId:
-                                                    creationMomentId,
-                                            }
-                                            : {}),
-                                        ...(targetFolderId
-                                            ? {
-                                                folderId:
-                                                    targetFolderId,
-                                            }
-                                            : {}),
+                                        momentId:
+                                            creationMomentId,
                                     }),
                             }
                         );
@@ -5001,19 +4988,22 @@ export default function AtlasPanel({
                     ) {
                         setMediaError(
                             attachResult.error ??
-                            "Upload succeeded, but Atlas could not place it in the current Content context."
+                            "Upload succeeded, but Atlas could not attach it to this Moment."
                         );
                     } else {
                         uploaded = {
                             ...uploaded,
+
                             moment_id:
                                 attachResult.media
                                     .moment_id ??
                                 uploaded.moment_id,
+
                             folder_id:
                                 attachResult.media
                                     .folder_id ??
                                 uploaded.folder_id,
+
                             updated_at:
                                 attachResult.media
                                     .updated_at ??
@@ -5029,7 +5019,9 @@ export default function AtlasPanel({
                     ]
                 );
 
-                setSelectedFile(null);
+                setSelectedFile(
+                    null
+                );
 
                 if (
                     fileInputRef.current
@@ -5044,10 +5036,14 @@ export default function AtlasPanel({
                 );
 
                 setMediaError(
-                    "Unexpected upload error."
+                    error instanceof Error
+                        ? error.message
+                        : "Unexpected upload error."
                 );
             } finally {
-                setIsUploading(false);
+                setIsUploading(
+                    false
+                );
             }
         };
 
