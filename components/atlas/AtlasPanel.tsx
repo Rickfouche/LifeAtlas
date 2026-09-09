@@ -4730,52 +4730,27 @@ export default function AtlasPanel({
             );
 
             try {
-                const formData =
-                    new FormData();
-
-                formData.append(
-                    "file",
-                    file
-                );
-
-                formData.append(
-                    "pinId",
-                    selectedPin.id
-                );
-
-                const response =
-                    await fetch(
-                        "/api/media/upload",
-                        {
-                            method:
-                                "POST",
-
-                            body:
-                                formData,
-                        }
-                    );
-
                 const result =
-                    await response.json();
+                    await uploadMediaDirect({
+                        file,
 
-                if (
-                    !response.ok
-                ) {
-                    setPinCoverError(
-                        result.error ??
-                        "Image upload failed."
-                    );
+                        pinId:
+                            selectedPin.id,
 
-                    return;
-                }
+                        folderId:
+                            null,
+                    });
 
                 const uploaded:
                     AtlasMedia = {
                     ...result.media,
 
                     moment_id:
+                        null,
+
+                    folder_id:
                         result.media
-                            .moment_id ??
+                            .folder_id ??
                         null,
 
                     url:
