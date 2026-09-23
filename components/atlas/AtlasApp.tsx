@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
     useCallback,
@@ -2237,6 +2237,10 @@ export default function AtlasApp({
                         pin.description ??
                         null,
 
+                    notes:
+                        pin.notes ??
+                        null,
+
                     place_provider:
                         pin.placeProvider ??
                         null,
@@ -2720,6 +2724,10 @@ export default function AtlasApp({
 
                     description:
                         pin.description ??
+                        null,
+
+                    notes:
+                        pin.notes ??
                         null,
 
                     place_provider:
