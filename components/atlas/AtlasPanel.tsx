@@ -731,6 +731,11 @@ export default function AtlasPanel({
             .NEXT_PUBLIC_BUNNY_CDN_URL ??
         "";
 
+    const bunnyS3CdnUrl =
+        process.env
+            .NEXT_PUBLIC_BUNNY_S3_CDN_URL ??
+        "";
+
     const isEditing =
         selectedPin !== null;
 
@@ -1962,7 +1967,7 @@ export default function AtlasPanel({
                                 item.source_type ===
                                     "upload" &&
                                     item.storage_path
-                                    ? `${bunnyCdnUrl.replace(
+                                    ? `${bunnyS3CdnUrl.replace(
                                         /\/$/,
                                         ""
                                     )}/${item.storage_path}`
